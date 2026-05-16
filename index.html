@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syed Uzair | Video & Photo Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --olive:       #4a4f3a;
+            --olive-dark:  #363b28;
+            --olive-light: #5c6347;
+            --brown:       #7a4a35;
+            --brown-light: #8c5740;
+            --cream:       #d8d4c0;
+            --cream-light: #e8e4d0;
+            --cream-dark:  #c4c0aa;
+            --dark:        #2a2e1e;
+            --text-sm:     #a0a890;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Barlow', sans-serif;
+            background: var(--olive);
+            color: var(--cream);
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--olive-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--cream-dark); border-radius: 10px; }
+
+        /* ── Cursor ── */
+        .cursor {
+            width: 10px; height: 10px;
+            background: var(--cream);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 99999;
+            transform: translate(-50%,-50%);
+            mix-blend-mode: difference;
+        }
+        .cursor-ring {
+            width: 36px; height: 36px;
+            border: 1.5px solid var(--cream);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 99998;
+            transform: translate(-50%,-50%);
+            transition: width .3s, height .3s, opacity .3s;
+            opacity: .5;
+            mix-blend-mode: difference;
+        }
+        .cursor-ring.expand { width: 56px; height: 56px; opacity: .8; }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed; top: 0; left: 0; width: 100%;
+            z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 22px 50px;
+            transition: all .4s ease;
+        }
+        nav.scrolled {
+            background: rgba(42,46,30,.96);
+            backdrop-filter: blur(20px);
+            padding: 14px 50px;
+            border-bottom: 1px solid rgba(216,212,192,.1);
+        }
+        .nav-left {
+            text-decoration: none; color: var(--cream);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 600; font-size: .75rem;
+            letter-spacing: 3px; text-transform: uppercase;
+            transition: opacity .3s; cursor: none;
+        }
+        .nav-left:hover { opacity: .7; }
+        .nav-center {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700; font-size: .8rem;
+            letter-spacing: 5px; text-transform: uppercase; color: var(--cream);
+        }
+        .nav-right { display: flex; align-items: center; gap: 30px; }
+        .nav-links { display: flex; list-style: none; gap: 28px; }
+        .nav-links a {
+            text-decoration: none; color: var(--cream-dark);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .75rem; letter-spacing: 3px;
+            text-transform: uppercase; font-weight: 600;
+            transition: color .3s; cursor: none;
+        }
+        .nav-links a:hover { color: var(--cream); }
+        .nav-dots { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; cursor: none; }
+        .nav-dots span { width: 4px; height: 4px; background: var(--cream); border-radius: 50%; }
+
+        /* ── HERO ── */
+        #hero {
+            width: 100%; min-height: 100vh;
+            background: var(--olive);
+            position: relative; overflow: hidden;
+        }
+
+        /* Brown centre panel */
+        .hero-panel {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 36%; height: 68%;
+            background: var(--brown); z-index: 1; pointer-events: none;
+        }
+
+        /* Photo container */
+        .hero-photo {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 36%; height: 92%;
+            z-index: 3; overflow: hidden; pointer-events: none;
+        }
+
+        /* Actual photo */
+        .mypho {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            display: block;
+            /* Fade from bottom so it blends with olive background */
+            -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        }
+
+        /* Big text overlay */
+        .hero-text-block {
+            position: absolute;
+            top: 35%; left: 0; right: 0;
+            transform: translateY(-50%);
+            z-index: 3;
+            padding: 0 40px;
+            pointer-events: none;
+            will-change: transform;
+        }
+
+        .hero-line {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: clamp(4.5rem, 11.5vw, 13rem);
+            line-height: .86;
+            text-transform: uppercase;
+            color: var(--cream);
+            letter-spacing: -2px;
+            display: block;
+            white-space: nowrap;
+        }
+
+        /* Bottom info row */
+        .hero-bottom {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            z-index: 5;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 40px;
+            align-items: end;
+            padding: 0 50px 54px;
+            pointer-events: none;
+        }
+        .hero-bottom > * { pointer-events: auto; }
+
+        .hero-desc {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .72rem; letter-spacing: 2.5px;
+            text-transform: uppercase; color: var(--cream-dark);
+            line-height: 1.95; font-weight: 600;
+        }
+        .hero-desc p + p { margin-top: 14px; }
+
+        .hero-cta {
+            display: inline-flex; align-items: center; gap: 18px;
+            padding: 15px 28px;
+            background: var(--dark); color: var(--cream);
+            text-decoration: none;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .82rem; font-weight: 700;
+            letter-spacing: 2px; text-transform: uppercase;
+            border: 1px solid rgba(216,212,192,.18);
+            transition: all .3s ease; margin-top: 22px; cursor: none;
+        }
+        .hero-cta:hover { background: var(--cream); color: var(--dark); }
+        .hero-cta:hover .arr { transform: translateX(5px); }
+        .arr { transition: transform .3s; }
+
+        .hero-center-badge { display: flex; flex-direction: column; align-items: center; }
+        .badge-circle {
+            width: 120px; height: 120px; border-radius: 50%;
+            background: var(--cream);
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            border: 3px solid var(--dark);
+        }
+        .badge-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 3.2rem; color: var(--dark); line-height: 1;
+        }
+        .badge-sub {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .58rem; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--olive); font-weight: 700;
+        }
+        .hero-right { text-align: right; }
+        .hero-right-desc {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .72rem; letter-spacing: 2.5px;
+            text-transform: uppercase; color: var(--cream-dark);
+            line-height: 1.95; font-weight: 600;
+        }
+        .hero-tags { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+        .hero-tag {
+            padding: 7px 16px;
+            border: 1px solid var(--cream-dark); border-radius: 50px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .68rem; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--cream-dark); font-weight: 600;
+        }
+
+        /* ── SHARED ── */
+        .section-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .68rem; letter-spacing: 5px;
+            text-transform: uppercase; color: var(--text-sm); font-weight: 600;
+            display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+        }
+        .section-label::before { content: ''; width: 28px; height: 1px; background: var(--text-sm); }
+        .section-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: clamp(3rem, 7vw, 7rem);
+            text-transform: uppercase; line-height: .88;
+            letter-spacing: -2px; color: var(--cream); margin-bottom: 60px;
+        }
+        .section-title .outline { -webkit-text-stroke: 1px var(--cream-dark); color: transparent; }
+
+        /* ── SKILLS ── */
+        #skills-section { background: var(--olive-dark); padding: 100px 0; }
+        .skills-inner { max-width: 1400px; margin: 0 auto; padding: 0 50px; }
+        .skills-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 70px; }
+        .skills-desc {
+            max-width: 340px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .72rem; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--text-sm);
+            line-height: 1.95; font-weight: 600;
+        }
+        .skills-categories { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        .skill-cat { background: var(--olive); padding: 50px 40px; transition: background .3s ease; }
+        .skill-cat:hover { background: var(--olive-light); }
+        .skill-cat-header { display: flex; align-items: center; gap: 16px; margin-bottom: 40px; }
+        .cat-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 4rem;
+            color: rgba(216,212,192,.12); line-height: 1;
+        }
+        .cat-info h3 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800; font-size: 1.5rem;
+            text-transform: uppercase; letter-spacing: 2px;
+            color: var(--cream); margin-bottom: 4px;
+        }
+        .cat-info p {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .68rem; letter-spacing: 3px;
+            text-transform: uppercase; color: var(--text-sm); font-weight: 600;
+        }
+        .skill-list { display: flex; flex-direction: column; gap: 22px; }
+        .skill-row { display: flex; align-items: center; gap: 14px; }
+        .skill-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700; font-size: .78rem;
+            letter-spacing: 3px; text-transform: uppercase;
+            color: var(--cream-dark); min-width: 145px;
+        }
+        .skill-track { flex: 1; height: 2px; background: rgba(216,212,192,.12); position: relative; }
+        .skill-fill {
+            height: 100%; background: var(--cream); width: 0;
+            transition: width 1.6s cubic-bezier(.4,0,.2,1); position: relative;
+        }
+        .skill-fill::after {
+            content: ''; position: absolute; right: -3px; top: 50%;
+            transform: translateY(-50%);
+            width: 6px; height: 6px; background: var(--cream); border-radius: 50%;
+        }
+        .skill-pct {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .72rem; letter-spacing: 1px;
+            color: var(--text-sm); font-weight: 600;
+            min-width: 35px; text-align: right;
+        }
+
+        /* ── STATS ── */
+        .stats-band {
+            background: var(--brown); padding: 60px 50px;
+            display: grid; grid-template-columns: repeat(4,1fr);
+        }
+        .stat-col {
+            padding: 20px 40px;
+            border-right: 1px solid rgba(216,212,192,.15);
+            text-align: center;
+        }
+        .stat-col:last-child { border-right: none; }
+        .stat-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 5rem;
+            color: var(--cream); line-height: 1; letter-spacing: -3px;
+        }
+        .stat-lbl {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .68rem; letter-spacing: 4px;
+            text-transform: uppercase; color: rgba(216,212,192,.55);
+            font-weight: 600; margin-top: 8px;
+        }
+
+        /* ── SERVICES ── */
+        #services-section { background: var(--olive); padding: 100px 0; }
+        .services-inner { max-width: 1400px; margin: 0 auto; padding: 0 50px; }
+        .services-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+        .service-item {
+            background: var(--olive-dark); padding: 48px 36px;
+            transition: background .3s ease; cursor: none;
+            position: relative; overflow: hidden;
+        }
+        .service-item::after {
+            content: ''; position: absolute; bottom: 0; left: 0;
+            height: 2px; width: 0; background: var(--brown); transition: width .5s ease;
+        }
+        .service-item:hover::after { width: 100%; }
+        .service-item:hover { background: var(--olive-light); }
+        .svc-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 4.5rem;
+            color: rgba(216,212,192,.07); line-height: 1; margin-bottom: 20px;
+        }
+        .svc-icon { font-size: 1.7rem; margin-bottom: 18px; display: block; }
+        .svc-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800; font-size: 1.5rem;
+            text-transform: uppercase; letter-spacing: 2px;
+            color: var(--cream); margin-bottom: 14px;
+        }
+        .svc-desc {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .7rem; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--text-sm);
+            line-height: 1.95; font-weight: 600;
+        }
+        .svc-arrow {
+            display: inline-block; margin-top: 26px; font-size: 1.2rem;
+            color: var(--cream-dark); transition: transform .3s, color .3s;
+        }
+        .service-item:hover .svc-arrow { transform: translate(4px,-4px); color: var(--cream); }
+
+        /* ── CONTACT ── */
+        #contact-section { background: var(--olive-dark); padding: 100px 0 0; }
+        .contact-inner { max-width: 1400px; margin: 0 auto; padding: 0 50px; }
+        .contact-big {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: clamp(4rem, 9vw, 11rem);
+            text-transform: uppercase; letter-spacing: -4px;
+            line-height: .85; color: var(--cream); margin-bottom: 80px;
+        }
+        .contact-big span { -webkit-text-stroke: 1.5px var(--cream-dark); color: transparent; }
+        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; }
+        .contact-card {
+            background: var(--olive); padding: 38px 36px;
+            display: flex; align-items: center; gap: 22px;
+            text-decoration: none; color: var(--cream);
+            transition: background .3s, transform .3s; cursor: none;
+        }
+        .contact-card:hover { background: var(--olive-light); transform: translateX(6px); }
+        .cc-icon {
+            width: 52px; height: 52px;
+            background: var(--brown);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 1.4rem; color: var(--cream);
+        }
+        .cc-icon svg { width: 24px; height: 24px; fill: var(--cream); }
+        .cc-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .62rem; letter-spacing: 4px;
+            text-transform: uppercase; color: var(--text-sm);
+            font-weight: 600; margin-bottom: 5px;
+        }
+        .cc-value {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700; font-size: 1rem;
+            letter-spacing: 1px; color: var(--cream);
+        }
+        .cc-arrow {
+            margin-left: auto; font-size: 1rem;
+            color: var(--text-sm); transition: transform .3s, color .3s;
+        }
+        .contact-card:hover .cc-arrow { transform: translate(4px,-4px); color: var(--cream); }
+
+        /* form */
+        .contact-form-row { background: var(--olive); padding: 60px 50px; margin-top: 4px; }
+        .form-head {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 2rem;
+            text-transform: uppercase; letter-spacing: 2px;
+            color: var(--cream); margin-bottom: 40px;
+        }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 4px; }
+        .form-full { grid-column: 1 / -1; }
+        .f-group label {
+            display: block;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .62rem; letter-spacing: 4px;
+            text-transform: uppercase; color: var(--text-sm);
+            font-weight: 600; margin-bottom: 10px;
+        }
+        .f-group input, .f-group select, .f-group textarea {
+            width: 100%; padding: 15px 18px;
+            background: var(--olive-dark);
+            border: 1px solid rgba(216,212,192,.1);
+            color: var(--cream);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .9rem; letter-spacing: 1px;
+            outline: none; transition: border-color .3s; cursor: none;
+        }
+        .f-group input:focus, .f-group select:focus, .f-group textarea:focus { border-color: var(--cream-dark); }
+        .f-group input::placeholder, .f-group textarea::placeholder { color: rgba(216,212,192,.28); }
+        .f-group textarea { height: 120px; resize: vertical; }
+        .f-group select option { background: var(--olive-dark); }
+        .submit-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+        .submit-btn {
+            display: inline-flex; align-items: center; gap: 20px;
+            padding: 20px 44px;
+            background: var(--cream); color: var(--dark);
+            border: none;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800; font-size: .85rem;
+            letter-spacing: 4px; text-transform: uppercase;
+            cursor: none; transition: background .3s, transform .3s, color .3s;
+        }
+        .submit-btn:hover { background: var(--brown); color: var(--cream); transform: translateY(-3px); }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--dark); padding: 38px 50px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid rgba(216,212,192,.07);
+        }
+        .footer-logo {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 1.5rem;
+            text-transform: uppercase; letter-spacing: 4px; color: var(--cream);
+        }
+        .footer-copy {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: .68rem; letter-spacing: 3px;
+            text-transform: uppercase; color: var(--text-sm); font-weight: 600;
+        }
+        .footer-socials { display: flex; gap: 14px; }
+        .footer-social {
+            width: 38px; height: 38px;
+            border: 1px solid rgba(216,212,192,.2);
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; color: var(--text-sm);
+            transition: all .3s; cursor: none;
+        }
+        .footer-social:hover { border-color: var(--cream); color: var(--cream); transform: translateY(-3px); }
+        .footer-social i { font-size: 1rem; }
+
+        /* ── REVEAL ── */
+        .reveal {
+            opacity: 0; transform: translateY(36px);
+            transition: opacity .85s ease, transform .85s ease;
+        }
+        .reveal.up { opacity: 1; transform: translateY(0); }
+        .d1 { transition-delay: .1s; }
+        .d2 { transition-delay: .2s; }
+        .d3 { transition-delay: .3s; }
+        .d4 { transition-delay: .4s; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width:1100px){
+            .services-grid { grid-template-columns: 1fr 1fr; }
+            .stats-band { grid-template-columns: repeat(2,1fr); }
+            .stat-col { border-right: none; border-bottom: 1px solid rgba(216,212,192,.1); }
+        }
+        @media (max-width:900px){
+            nav { padding: 18px 24px; }
+            nav.scrolled { padding: 12px 24px; }
+            .nav-center, .nav-links { display: none; }
+            .hero-panel, .hero-photo { width: 55%; }
+            .hero-line { font-size: clamp(3.5rem,12vw,8rem); }
+            .hero-bottom { grid-template-columns: 1fr; padding: 0 24px 40px; gap: 20px; }
+            .hero-center-badge { display: none; }
+            .hero-right { text-align: left; }
+            .hero-tags { justify-content: flex-start; }
+            .skills-categories, .services-grid, .contact-grid, .form-grid { grid-template-columns: 1fr; }
+            .skills-inner, .services-inner, .contact-inner { padding: 0 24px; }
+            #skills-section, #services-section, #contact-section { padding: 70px 0; }
+            .skills-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+            .contact-form-row { padding: 40px 24px; }
+            footer { flex-direction: column; gap: 16px; text-align: center; }
+            .hero-text-block { padding: 0 20px; }
+            .contact-big { font-size: clamp(3rem,10vw,7rem); }
+        }
+        @media (max-width:600px){
+            .hero-panel, .hero-photo { width: 70%; }
+            .stats-band { grid-template-columns: 1fr 1fr; padding: 40px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="cursor" id="cur"></div>
+<div class="cursor-ring" id="curRing"></div>
+
+<!-- NAV -->
+<nav id="nav">
+    <a href="#contact-section" class="nav-left">Start A Project &nbsp;↗</a>
+    <div class="nav-center">Syed Uzair</div>
+    <div class="nav-right">
+        <ul class="nav-links">
+            <li><a href="#skills-section">Skills</a></li>
+            <li><a href="#services-section">Services</a></li>
+            <li><a href="#contact-section">Contact</a></li>
+        </ul>
+        <div class="nav-dots">
+            <span></span><span></span>
+            <span></span><span></span>
+        </div>
+    </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+    <!-- Brown accent panel behind photo -->
+    <div class="hero-panel"></div>
+
+    <!-- YOUR ACTUAL PHOTO -->
+    <div class="hero-photo">
+        <img class="mypho" src="IMG_6600 copy.HEIC" alt="Syed Uzair">
+    </div>
+
+    <!-- Big text — pure translate tilt, never rotates -->
+    <div class="hero-text-block" id="heroText">
+        <span class="hero-line">Syed</span>
+        <span class="hero-line">Uzair</span>
+        <span class="hero-line">Video &amp;</span>
+        <span class="hero-line">Editor</span>
+    </div>
+
+    <!-- Bottom info row -->
+    <div class="hero-bottom">
+        <div>
+            <p class="hero-desc">
+                As a video &amp; photo editor, I focus on<br>
+                producing top–notch and impactful<br>
+                visual experiences.
+            </p>
+            <p class="hero-desc" style="margin-top:14px;">
+                Syed's visual editing expertise<br>
+                delivered with precision.
+            </p>
+            <a href="#contact-section" class="hero-cta">
+                Let's talk &nbsp;<span class="arr">→</span>
+            </a>
+        </div>
+
+        <div class="hero-center-badge">
+            <div class="badge-circle">
+                <span class="badge-num">5+</span>
+                <span class="badge-sub">Years</span>
+            </div>
+        </div>
+
+        <div class="hero-right">
+            <p class="hero-right-desc">
+                A cutting–edge visual content studio<br>
+                designed to elevate brands through<br>
+                exceptional video &amp; photo editing.
+            </p>
+            <p class="hero-right-desc" style="margin-top:14px;">
+                Exceptional quality and<br>creative visual storytelling.
+            </p>
+            <div class="hero-tags">
+                <span class="hero-tag">Video Editing</span>
+                <span class="hero-tag">2024</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── SKILLS ── -->
+<div id="skills-section">
+    <div class="skills-inner">
+        <div class="skills-header">
+            <div>
+                <div class="section-label reveal">Expertise</div>
+                <h2 class="section-title reveal d1">Tools &amp;<br><span class="outline">Mastery</span></h2>
+            </div>
+            <p class="skills-desc reveal d2">
+                Industry–leading tools mastered<br>
+                across video and photo editing<br>
+                for premium results.
+            </p>
+        </div>
+        <div class="skills-categories">
+            <div class="skill-cat reveal d1">
+                <div class="skill-cat-header">
+                    <div class="cat-num">01</div>
+                    <div class="cat-info"><h3>Video Editing</h3><p>Professional video tools</p></div>
+                </div>
+                <div class="skill-list">
+                    <div class="skill-row"><span class="skill-name">Premiere Pro</span><div class="skill-track"><div class="skill-fill" data-w="92"></div></div><span class="skill-pct">92%</span></div>
+                    <div class="skill-row"><span class="skill-name">After Effects</span><div class="skill-track"><div class="skill-fill" data-w="88"></div></div><span class="skill-pct">88%</span></div>
+                    <div class="skill-row"><span class="skill-name">DaVinci Resolve</span><div class="skill-track"><div class="skill-fill" data-w="85"></div></div><span class="skill-pct">85%</span></div>
+                    <div class="skill-row"><span class="skill-name">CapCut</span><div class="skill-track"><div class="skill-fill" data-w="96"></div></div><span class="skill-pct">96%</span></div>
+                    <div class="skill-row"><span class="skill-name">VN Editor</span><div class="skill-track"><div class="skill-fill" data-w="91"></div></div><span class="skill-pct">91%</span></div>
+                </div>
+            </div>
+            <div class="skill-cat reveal d2">
+                <div class="skill-cat-header">
+                    <div class="cat-num">02</div>
+                    <div class="cat-info"><h3>Photo Editing</h3><p>Professional photo tools</p></div>
+                </div>
+                <div class="skill-list">
+                    <div class="skill-row"><span class="skill-name">Lightroom</span><div class="skill-track"><div class="skill-fill" data-w="93"></div></div><span class="skill-pct">93%</span></div>
+                    <div class="skill-row"><span class="skill-name">Snapseed</span><div class="skill-track"><div class="skill-fill" data-w="97"></div></div><span class="skill-pct">97%</span></div>
+                    <div class="skill-row"><span class="skill-name">PicsArt</span><div class="skill-track"><div class="skill-fill" data-w="91"></div></div><span class="skill-pct">91%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── STATS ── -->
+<div class="stats-band">
+    <div class="stat-col reveal"><div class="stat-num" data-count="150">0</div><div class="stat-lbl">Projects Done</div></div>
+    <div class="stat-col reveal d1"><div class="stat-num" data-count="80">0</div><div class="stat-lbl">Happy Clients</div></div>
+    <div class="stat-col reveal d2"><div class="stat-num" data-count="5">0</div><div class="stat-lbl">Years Experience</div></div>
+    <div class="stat-col reveal d3"><div class="stat-num" data-count="8">0</div><div class="stat-lbl">Tools Mastered</div></div>
+</div>
+
+<!-- ── SERVICES ── -->
+<div id="services-section">
+    <div class="services-inner">
+        <div class="section-label reveal">What I Offer</div>
+        <h2 class="section-title reveal d1">My<br><span class="outline">Services</span></h2>
+        <div class="services-grid">
+            <div class="service-item reveal"><div class="svc-num">01</div><span class="svc-icon">🎬</span><div class="svc-title">Video Editing</div><p class="svc-desc">Professional cuts, seamless transitions, and cinematic storytelling that keeps audiences engaged.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d1"><div class="svc-num">02</div><span class="svc-icon">✨</span><div class="svc-title">Motion Graphics</div><p class="svc-desc">Eye–catching animations and visual effects using After Effects that elevate your content.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d2"><div class="svc-num">03</div><span class="svc-icon">🎨</span><div class="svc-title">Color Grading</div><p class="svc-desc">Professional color correction with DaVinci Resolve achieving cinematic looks for your brand.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d1"><div class="svc-num">04</div><span class="svc-icon">📸</span><div class="svc-title">Photo Retouching</div><p class="svc-desc">Detailed enhancement with Lightroom and Snapseed making every shot look professionally polished.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d2"><div class="svc-num">05</div><span class="svc-icon">📱</span><div class="svc-title">Short–Form Content</div><p class="svc-desc">Viral–ready Reels, TikToks and YouTube Shorts optimised for maximum engagement.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d3"><div class="svc-num">06</div><span class="svc-icon">🖼</span><div class="svc-title">Social Media Design</div><p class="svc-desc">Creative composites for posts, thumbnails and banners that build your visual identity.</p><span class="svc-arrow">↗</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── CONTACT ── -->
+<div id="contact-section">
+    <div class="contact-inner">
+        <div class="section-label reveal">Let's Connect</div>
+        <div class="contact-big reveal d1">Get<br>In <span>Touch</span></div>
+
+        <div class="contact-grid">
+            <!-- Instagram -->
+            <a href="https://www.instagram.com/syed_uzair102/" target="_blank" class="contact-card reveal">
+                <div class="cc-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </div>
+                <div>
+                    <div class="cc-label">Instagram</div>
+                    <div class="cc-value">@syed_uzair102</div>
+                </div>
+                <span class="cc-arrow">↗</span>
+            </a>
+
+            <!-- LinkedIn -->
+            <a href="https://www.linkedin.com/in/syed-uzair-570422350/" target="_blank" class="contact-card reveal d1">
+                <div class="cc-icon">
+                    <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </div>
+                <div>
+                    <div class="cc-label">LinkedIn</div>
+                    <div class="cc-value">Syed Uzair</div>
+                </div>
+                <span class="cc-arrow">↗</span>
+            </a>
+
+            <!-- Email -->
+            <a href="mailto:syeduzairrrr102@gmail.com" class="contact-card reveal d2">
+                <div class="cc-icon">
+                    <svg viewBox="0 0 24 24"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg>
+                </div>
+                <div>
+                    <div class="cc-label">Email</div>
+                    <div class="cc-value">syeduzairrrr102@gmail.com</div>
+                </div>
+                <span class="cc-arrow">↗</span>
+            </a>
+
+            <!-- GitHub -->
+            <a href="https://github.com/uzairrrr102" target="_blank" class="contact-card reveal d3">
+                <div class="cc-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                </div>
+                <div>
+                    <div class="cc-label">GitHub</div>
+                    <div class="cc-value">uzairrrr102</div>
+                </div>
+                <span class="cc-arrow">↗</span>
+            </a>
+        </div>
+
+        <!-- Form -->
+        <div class="contact-form-row reveal">
+            <div class="form-head">Send a Message →</div>
+            <form onsubmit="handleForm(event)">
+                <div class="form-grid">
+                    <div class="f-group"><label>First Name</label><input type="text" placeholder="John" required></div>
+                    <div class="f-group"><label>Last Name</label><input type="text" placeholder="Doe" required></div>
+                    <div class="f-group"><label>Email</label><input type="email" placeholder="john@email.com" required></div>
+                    <div class="f-group">
+                        <label>Service</label>
+                        <select>
+                            <option value="">Select service</option>
+                            <option>Video Editing</option>
+                            <option>Motion Graphics</option>
+                            <option>Color Grading</option>
+                            <option>Photo Retouching</option>
+                            <option>Short-Form Content</option>
+                            <option>Social Media Design</option>
+                        </select>
+                    </div>
+                    <div class="f-group"><label>Phone (Optional)</label><input type="tel" placeholder="+92 300 000 0000"></div>
+                    <div class="f-group">
+                        <label>Budget</label>
+                        <select>
+                            <option value="">Select budget</option>
+                            <option>Under $50</option>
+                            <option>$50 – $200</option>
+                            <option>$200 – $500</option>
+                            <option>$500+</option>
+                        </select>
+                    </div>
+                    <div class="f-group form-full"><label>Message</label><textarea placeholder="Tell me about your project..." required></textarea></div>
+                </div>
+                <div class="submit-row"><button type="submit" class="submit-btn">Send Message &nbsp;→</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-logo">S.U</div>
+    <div class="footer-copy">© 2024 Syed Uzair — All rights reserved</div>
+    <div class="footer-socials">
+        <a href="https://www.instagram.com/syed_uzair102/" target="_blank" class="footer-social" title="Instagram">
+            <i class="fa-brands fa-instagram"></i>
+        </a>
+        <a href="https://www.linkedin.com/in/syed-uzair-570422350/" target="_blank" class="footer-social" title="LinkedIn">
+            <i class="fa-brands fa-linkedin-in"></i>
+        </a>
+        <a href="https://github.com/uzairrrr102" target="_blank" class="footer-social" title="GitHub">
+            <i class="fa-brands fa-github"></i>
+        </a>
+        <a href="mailto:syeduzairrrr102@gmail.com" class="footer-social" title="Email">
+            <i class="fa-solid fa-envelope"></i>
+        </a>
+    </div>
+</footer>
+
+<script>
+/* ── Cursor ── */
+const cur = document.getElementById('cur');
+const curRing = document.getElementById('curRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cur.style.left = mx + 'px';
+    cur.style.top  = my + 'px';
+});
+
+(function lerpRing() {
+    rx += (mx - rx) * 0.1;
+    ry += (my - ry) * 0.1;
+    curRing.style.left = rx + 'px';
+    curRing.style.top  = ry + 'px';
+    requestAnimationFrame(lerpRing);
+})();
+
+document.querySelectorAll('a, button, .service-item, .contact-card, .skill-cat').forEach(el => {
+    el.addEventListener('mouseenter', () => curRing.classList.add('expand'));
+    el.addEventListener('mouseleave', () => curRing.classList.remove('expand'));
+});
+
+/* ── Navbar ── */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 60));
+
+/* ── Hero tilt — translateY(-50%) preserved at ALL times ── */
+const hero     = document.getElementById('hero');
+const heroText = document.getElementById('heroText');
+const MAX_PX   = 16;
+
+hero.addEventListener('mousemove', e => {
+    const { left, top, width, height } = hero.getBoundingClientRect();
+    const xR = (e.clientX - left) / width  - 0.5;
+    const yR = (e.clientY - top)  / height - 0.5;
+    /* translateY(-50%) is ALWAYS first so vertical centering never breaks */
+    heroText.style.transform =
+        `translateY(-50%) translate(${xR * MAX_PX}px, ${yR * MAX_PX}px)`;
+});
+
+hero.addEventListener('mouseleave', () => {
+    heroText.style.transition = 'transform 0.8s ease';
+    heroText.style.transform  = 'translateY(-50%) translate(0px,0px)';
+    setTimeout(() => { heroText.style.transition = ''; }, 820);
+});
+
+/* ── Card tilt ── */
+document.querySelectorAll('.service-item, .skill-cat').forEach(card => {
+    card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width  - 0.5) * 2;
+        const y = ((e.clientY - r.top)  / r.height - 0.5) * 2;
+        card.style.transform = `perspective(800px) rotateX(${-y*4}deg) rotateY(${x*4}deg)`;
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.transition = 'transform 0.55s ease, background 0.3s ease';
+        card.style.transform  = 'perspective(800px) rotateX(0) rotateY(0)';
+        setTimeout(() => { card.style.transition = ''; }, 560);
+    });
+});
+
+/* ── Scroll reveal ── */
+const revObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('up'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+
+/* ── Skill bars ── */
+document.querySelectorAll('.skill-fill').forEach(bar => {
+    const io = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+            setTimeout(() => { bar.style.width = bar.dataset.w + '%'; }, 350);
+            io.disconnect();
+        }
+    }, { threshold: 0.4 });
+    io.observe(bar);
+});
+
+/* ── Counters ── */
+function runCounter(el) {
+    if (el.dataset.done) return;
+    el.dataset.done = '1';
+    const target = +el.dataset.count;
+    const step = target / (1800 / 16);
+    let val = 0;
+    const t = setInterval(() => {
+        val += step;
+        if (val >= target) { el.textContent = target + '+'; clearInterval(t); }
+        else               { el.textContent = Math.floor(val) + '+'; }
+    }, 16);
+}
+new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting)
+            e.target.querySelectorAll('.stat-num[data-count]').forEach(runCounter);
+    });
+}, { threshold: 0.25 }).observe(document.querySelector('.stats-band'));
+
+/* ── Smooth anchors ── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+    });
+});
+
+/* ── Form ── */
+function handleForm(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('.submit-btn');
+    btn.textContent = '✓ Sent Successfully';
+    btn.style.background = 'var(--olive-dark)';
+    btn.style.color      = 'var(--cream)';
+    setTimeout(() => {
+        btn.textContent = 'Send Message →';
+        btn.style.background = btn.style.color = '';
+        e.target.reset();
+    }, 3500);
+}
+</script>
+</body>
+</html>
