@@ -1267,7 +1267,7 @@ async function addVideo(){
             // Ensure the endpoint is the upload endpoint for the configured cloud:
             // https://api.cloudinary.com/v1_1/<cloud_name>/<upload_preset>/upload
             // (resource_type is provided via formData)
-            const uploadEndpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${CLOUDINARY_UNSIGNED_UPLOAD_PRESET}/upload`;
+const uploadEndpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`;
 
             const res = await fetch(uploadEndpoint, {
                 method: 'POST',
