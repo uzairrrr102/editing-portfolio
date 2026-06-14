@@ -1285,10 +1285,9 @@ const uploadEndpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}
             const videoUrl = cloudinaryResult.secure_url;
             const publicId = cloudinaryResult.public_id;
 
-
-            // Optional thumbnail disabled for now (to avoid Firebase Storage CORS issues).
-            // Upload thumbnails to Cloudinary later if you want.
-            let thumbUrl='';
+            // Auto-generate a thumbnail from the uploaded video in Cloudinary (no Firebase Storage needed).
+            // so_1 = seek to 1 second and extract a frame.
+            const thumbUrl = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/video/upload/so_1/${publicId}.jpg`;
 
             await db.collection('portfolioVideos').add({
                 title, cat,
