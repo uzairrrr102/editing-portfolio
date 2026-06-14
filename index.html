@@ -848,17 +848,43 @@
    → Create project → Add web app → copy config below
 ═══════════════════════════════════════════════════ */
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCv8ZYdHK6Bar3Su4Y4q26uc1w3OQJabwQ",
+    authDomain: "syed-uzair-portfolio.firebaseapp.com",
+    projectId: "syed-uzair-portfolio",
+    storageBucket: "syed-uzair-portfolio.firebasestorage.app",
+    messagingSenderId: "354658194426",
+    appId: "1:354658194426:web:4a31e4d975ddddc8750a43"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db      = firebase.firestore();
+// Debug: show config is (still) placeholder
+console.log('[Firebase] firebaseConfig=', firebaseConfig);
+
+try {
+    firebase.initializeApp(firebaseConfig);
+} catch (e) {
+    console.warn('[Firebase] initializeApp error (may be already initialized):', e);
+}
+
+const db = firebase.firestore();
 const storage = firebase.storage();
+
+// Debug: test connections early
+(async () => {
+    // listCollections is NOT available in the compat SDK. Use a harmless read instead.
+    try {
+        console.log('[Firebase] Testing Firestore connectivity...');
+        const snap = await db.collection('portfolioVideos').limit(1).get();
+        console.log('[Firebase] Firestore reachable. Docs:', snap.size);
+    } catch (e) {
+        console.error('[Firebase] Firestore connection failed:', e);
+        toast('Firebase not reachable (Firestore). Check config/rules.','err');
+    }
+    try {
+        console.log('[Firebase] Storage bucket=', storage.app.options.storageBucket);
+    } catch (e) {
+        console.error('[Firebase] Storage bucket debug failed:', e);
+    }
+})();
 
 /* ═══════════════════════════════════════════════════
    ADMIN CREDENTIALS
@@ -1220,16 +1246,38 @@ async function addVideo(){
             prog.style.display='block';
 
             // Upload video to Firebase Storage
-            const videoRef=storage.ref('portfolio/videos/'+Date.now()+'_'+vf.name);
-            const uploadTask=videoRef.put(vf);
+            console.log('[Upload] starting video upload', {
+                title,
+                cat,
+                fileName: vf.name,
+                fileSize: vf.size,
+                type: vf.type,
+            });
+
+            const videoRef = storage.ref('portfolio/videos/' + Date.now() + '_' + vf.name);
+            console.log('[Upload] storageRef=', videoRef.fullPath);
+
+            const uploadTask = videoRef.put(vf);
 
             await new Promise((resolve,reject)=>{
                 uploadTask.on('state_changed',
-                    snap=>{ const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100); fill.style.width=pct+'%'; progTxt.textContent='Uploading… '+pct+'%'; },
-                    err=>reject(err),
-                    ()=>resolve()
+                    snap=>{
+                        const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100);
+                        fill.style.width=pct+'%';
+                        progTxt.textContent='Uploading… '+pct+'%';
+                        if(pct===0 || pct===100) console.log('[Upload] progress pct=', pct, snap.bytesTransferred, snap.totalBytes);
+                    },
+                    err=>{
+                        console.error('[Upload] uploadTask error:', err);
+                        reject(err);
+                    },
+                    ()=>{
+                        console.log('[Upload] uploadTask complete');
+                        resolve();
+                    }
                 );
             });
+
 
             fill.style.width='100%'; progTxt.textContent='Finalizing…';
             const videoUrl=await uploadTask.snapshot.ref.getDownloadURL();
@@ -1267,7 +1315,7 @@ async function addVideo(){
 
     }catch(err){
         console.error(err);
-        toast('Error: '+err.message,'err');
+toast('Error: '+(err?.message||err),'err'); console.error('[Upload] uploadTask catch error:', err);
     } finally {
         btn.disabled=false;
         btn.innerHTML='<i class="fa-solid fa-plus"></i> Add to Portfolio';
@@ -1633,13 +1681,42 @@ function renderPublicReviews(){
         </div>
     `).join('');
 
-    moreRow.style.display=approved.length>shownReviews?'block':'none';
+    // Show all reviews on demand with no hard limit.
+    // Button toggles between: show 6 vs show all.
+    moreRow.style.display = approved.length > REVIEWS_PER_PAGE ? 'block' : 'none';
+
+    const btn=document.getElementById('showMoreBtn');
+    if(btn){
+        btn.textContent = shownReviews > REVIEWS_PER_PAGE ? 'Show Less Reviews ↑' : 'Show More Reviews ↓';
+    }
+
+
     addHover();
     observeCards(); // staggered reveal
 }
 
 document.getElementById('showMoreBtn').addEventListener('click',()=>{
-    shownReviews+=REVIEWS_PER_PAGE;
+    // toggle: show more -> show less
+    const btn=document.getElementById('showMoreBtn');
+    const allApproved=allReviews.filter(r=>r.approved);
+
+    // Goal: always show ONLY 6 when user clicks back to less
+    const canShowMore = allApproved.length > REVIEWS_PER_PAGE;
+    if(!canShowMore){
+        shownReviews = REVIEWS_PER_PAGE;
+        btn.textContent='Show More Reviews ↓';
+    } else {
+        const showingMore = shownReviews > REVIEWS_PER_PAGE;
+        if(showingMore){
+            // currently showing all -> collapse to exactly 6
+            shownReviews = REVIEWS_PER_PAGE;
+            btn.textContent = 'Show More Reviews ↓';
+        } else {
+            // currently showing 6 -> expand to show ALL approved reviews
+            shownReviews = allApproved.length;
+            btn.textContent = 'Show Less Reviews ↑';
+        }
+    }
     renderPublicReviews();
 });
 
@@ -1674,7 +1751,9 @@ function renderAdminReviewList(){
     addHover();
 }
 
-async function toggleApprove(id,val){
+window.toggleApprove = async function(id,val){
+    // ensure inline onclick can always find this handler
+
     try{
         await db.collection('reviews').doc(id).update({approved:val});
         await loadReviews();
