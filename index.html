@@ -1264,6 +1264,9 @@ async function addVideo(){
                 type: vf.type,
             });
 
+            // Ensure the endpoint is the upload endpoint for the configured cloud:
+            // https://api.cloudinary.com/v1_1/<cloud_name>/<upload_preset>/upload
+            // (resource_type is provided via formData)
             const uploadEndpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${CLOUDINARY_UNSIGNED_UPLOAD_PRESET}/upload`;
 
             const res = await fetch(uploadEndpoint, {
@@ -1281,6 +1284,7 @@ async function addVideo(){
             // Cloudinary returns fields like secure_url, public_id, bytes, format, etc.
             const videoUrl = cloudinaryResult.secure_url;
             const publicId = cloudinaryResult.public_id;
+
 
             // Optional thumbnail (still to Firebase for now; can be migrated later)
             let thumbUrl='';
