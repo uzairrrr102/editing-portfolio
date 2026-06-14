@@ -1487,7 +1487,9 @@ function renderPortfolio(){
         </div>`;
     }).join('');
 
-    moreRow.style.display=filtered.length>shownPortfolio?'block':'none';
+    // Show the button if there are more than the base page size (no matter current toggle state).
+    // Then clicking toggles between base page (6) and full list.
+    moreRow.style.display = filtered.length > PORTFOLIO_PER_PAGE ? 'block' : 'none';
     addHover();
     observeCards(); // trigger staggered card animation
 }
