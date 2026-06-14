@@ -1411,8 +1411,24 @@ document.getElementById('filterBtns').addEventListener('click',e=>{
     renderPortfolio();
 });
 
+let isPortfolioExpanded = false;
+
 document.getElementById('portShowMoreBtn').addEventListener('click',()=>{
-    shownPortfolio+=PORTFOLIO_PER_PAGE;
+    const filtered = activeFilter==='all' ? allVideos : allVideos.filter(v=>v.cat===activeFilter);
+    const canExpand = filtered.length > PORTFOLIO_PER_PAGE;
+    if(!canExpand) return;
+
+    if(isPortfolioExpanded){
+        // collapse back to initial page size
+        shownPortfolio = PORTFOLIO_PER_PAGE;
+        isPortfolioExpanded = false;
+        document.getElementById('portShowMoreBtn').textContent = 'Show More Work \u00a0\u2193';
+    } else {
+        // expand to show all
+        shownPortfolio = filtered.length;
+        isPortfolioExpanded = true;
+        document.getElementById('portShowMoreBtn').textContent = 'Show Less Work \u00a0\u2191';
+    }
     renderPortfolio();
 });
 
