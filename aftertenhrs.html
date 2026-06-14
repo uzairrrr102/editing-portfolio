@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syed Uzair | Video & Photo Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --olive:#4a4f3a;--olive-dark:#363b28;--olive-light:#5c6347;
+            --brown:#7a4a35;--brown-light:#8c5740;
+            --cream:#d8d4c0;--cream-dark:#c4c0aa;
+            --dark:#2a2e1e;--text-sm:#a0a890;
+        }
+        html{scroll-behavior:smooth;}
+        body{font-family:'Barlow',sans-serif;background:var(--olive);color:var(--cream);overflow-x:hidden;cursor:none;}
+        ::-webkit-scrollbar{width:4px;}
+        ::-webkit-scrollbar-track{background:var(--olive-dark);}
+        ::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:10px;}
+
+        /* ── CURSOR ── */
+        .cursor{width:10px;height:10px;background:var(--cream);border-radius:50%;position:fixed;pointer-events:none;z-index:999999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:transform .1s;}
+        .cursor-ring{width:36px;height:36px;border:1.5px solid var(--cream);border-radius:50%;position:fixed;pointer-events:none;z-index:999998;transform:translate(-50%,-50%);transition:width .3s,height .3s,opacity .3s;opacity:.5;mix-blend-mode:difference;}
+        .cursor-ring.expand{width:56px;height:56px;opacity:.8;}
+
+        /* ── NAV ── */
+        nav{position:fixed;top:0;left:0;width:100%;z-index:1000;display:flex;justify-content:space-between;align-items:center;padding:22px 50px;transition:all .4s ease;}
+        nav.scrolled{background:rgba(42,46,30,.96);backdrop-filter:blur(20px);padding:14px 50px;border-bottom:1px solid rgba(216,212,192,.1);}
+        .nav-left{text-decoration:none;color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;transition:opacity .3s;cursor:none;}
+        .nav-left:hover{opacity:.7;}
+        .nav-center{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:5px;text-transform:uppercase;color:var(--cream);}
+        .nav-right{display:flex;align-items:center;gap:30px;}
+        .nav-links{display:flex;list-style:none;gap:28px;}
+        .nav-links a{text-decoration:none;color:var(--cream-dark);font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;font-weight:600;transition:color .3s;cursor:none;}
+        .nav-links a:hover{color:var(--cream);}
+        .nav-dots{display:grid;grid-template-columns:1fr 1fr;gap:4px;cursor:none;}
+        .nav-dots span{width:4px;height:4px;background:var(--cream);border-radius:50%;}
+
+        /* ── MOBILE MENU ── */
+        .mobile-menu-btn{display:none;flex-direction:column;gap:5px;cursor:none;background:none;border:none;padding:8px;z-index:2000;position:relative;}
+        .mobile-menu-btn span{display:block;width:24px;height:2px;background:var(--cream);transition:all .4s ease;transform-origin:center;}
+        .mobile-menu-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+        .mobile-menu-btn.open span:nth-child(2){opacity:0;transform:scaleX(0);}
+        .mobile-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+        .mobile-drawer{position:fixed;top:0;right:-100%;width:100%;height:100vh;background:var(--dark);z-index:1050;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;transition:right .5s cubic-bezier(.77,0,.175,1);}
+        .mobile-drawer.open{right:0;}
+        .mobile-drawer a{text-decoration:none;color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(2.5rem,10vw,5rem);text-transform:uppercase;letter-spacing:3px;transition:color .3s,transform .3s;cursor:none;opacity:0;transform:translateX(40px);}
+        .mobile-drawer.open a{opacity:1;transform:translateX(0);}
+        .mobile-drawer.open a:nth-child(1){transition:all .5s ease .2s;}
+        .mobile-drawer.open a:nth-child(2){transition:all .5s ease .3s;}
+        .mobile-drawer.open a:nth-child(3){transition:all .5s ease .4s;}
+        .mobile-drawer.open a:nth-child(4){transition:all .5s ease .5s;}
+        .mobile-drawer.open a:nth-child(5){transition:all .5s ease .6s;}
+        .mobile-drawer a:hover{color:var(--brown-light);}
+        .mobile-drawer-footer{position:absolute;bottom:40px;font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;opacity:0;transition:opacity .5s ease .7s;}
+        .mobile-drawer.open .mobile-drawer-footer{opacity:1;}
+
+        /* ── HERO ── */
+        #hero{width:100%;min-height:100vh;background:var(--olive);position:relative;overflow:hidden;}
+        .hero-panel{position:absolute;top:0;left:50%;transform:translateX(-50%);width:36%;height:68%;background:var(--brown);z-index:1;pointer-events:none;}
+        .hero-photo{position:absolute;top:0;left:50%;transform:translateX(-50%);width:36%;height:92%;z-index:3;overflow:hidden;pointer-events:none;}
+        .mypho{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;-webkit-mask-image:linear-gradient(to bottom,black 60%,transparent 100%);mask-image:linear-gradient(to bottom,black 60%,transparent 100%);}
+        .hero-text-block{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);z-index:2;padding:0 40px;pointer-events:none;will-change:transform;}
+        .hero-line{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(4.5rem,11.5vw,13rem);line-height:.86;text-transform:uppercase;color:var(--cream);letter-spacing:-2px;display:block;white-space:nowrap;}
+        .hero-bottom{position:absolute;bottom:0;left:0;right:0;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;gap:40px;align-items:end;padding:0 50px 54px;pointer-events:none;}
+        .hero-bottom>*{pointer-events:auto;}
+        .hero-desc{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--cream-dark);line-height:1.95;font-weight:600;}
+        .hero-cta{display:inline-flex;align-items:center;gap:18px;padding:15px 28px;background:var(--dark);color:var(--cream);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(216,212,192,.18);transition:all .3s ease;margin-top:22px;cursor:none;}
+        .hero-cta:hover{background:var(--cream);color:var(--dark);}
+        .hero-cta:hover .arr{transform:translateX(5px);}
+        .arr{transition:transform .3s;}
+        .hero-center-badge{display:flex;flex-direction:column;align-items:center;}
+        .badge-circle{width:120px;height:120px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;flex-direction:column;border:3px solid var(--dark);}
+        .badge-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:3.2rem;color:var(--dark);line-height:1;}
+        .badge-sub{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--olive);font-weight:700;}
+        .hero-right{text-align:right;}
+        .hero-right-desc{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--cream-dark);line-height:1.95;font-weight:600;}
+        .hero-tags{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+        .hero-tag{padding:7px 16px;border:1px solid var(--cream-dark);border-radius:50px;font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:2px;text-transform:uppercase;color:var(--cream-dark);font-weight:600;}
+
+        /* ── SHARED ── */
+        .section-label{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:5px;text-transform:uppercase;color:var(--text-sm);font-weight:600;display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+        .section-label::before{content:'';width:28px;height:1px;background:var(--text-sm);}
+        .section-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(3rem,7vw,7rem);text-transform:uppercase;line-height:.88;letter-spacing:-2px;color:var(--cream);margin-bottom:60px;}
+        .section-title .outline{-webkit-text-stroke:1px var(--cream-dark);color:transparent;}
+
+        /* ── SKILLS ── */
+        #skills-section{background:var(--olive-dark);padding:100px 0;}
+        .skills-inner{max-width:1400px;margin:0 auto;padding:0 50px;}
+        .skills-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:70px;}
+        .skills-desc{max-width:340px;font-family:'Barlow Condensed',sans-serif;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);line-height:1.95;font-weight:600;}
+        .skills-categories{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+        .skill-cat{background:var(--olive);padding:50px 40px;transition:background .3s ease;}
+        .skill-cat:hover{background:var(--olive-light);}
+        .skill-cat-header{display:flex;align-items:center;gap:16px;margin-bottom:40px;}
+        .cat-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:4rem;color:rgba(216,212,192,.12);line-height:1;}
+        .cat-info h3{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.5rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:4px;}
+        .cat-info p{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+        .skill-list{display:flex;flex-direction:column;gap:22px;}
+        .skill-row{display:flex;align-items:center;gap:14px;}
+        .skill-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:3px;text-transform:uppercase;color:var(--cream-dark);min-width:145px;}
+        .skill-track{flex:1;height:2px;background:rgba(216,212,192,.12);position:relative;}
+        .skill-fill{height:100%;background:var(--cream);width:0;transition:width 1.6s cubic-bezier(.4,0,.2,1);position:relative;}
+        .skill-fill::after{content:'';position:absolute;right:-3px;top:50%;transform:translateY(-50%);width:6px;height:6px;background:var(--cream);border-radius:50%;}
+        .skill-pct{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;color:var(--text-sm);font-weight:600;min-width:35px;text-align:right;}
+
+        /* ── STATS ── */
+        .stats-band{background:var(--brown);padding:60px 50px;display:grid;grid-template-columns:repeat(4,1fr);}
+        .stat-col{padding:20px 40px;border-right:1px solid rgba(216,212,192,.15);text-align:center;}
+        .stat-col:last-child{border-right:none;}
+        .stat-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:5rem;color:var(--cream);line-height:1;letter-spacing:-3px;}
+        .stat-lbl{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:4px;text-transform:uppercase;color:rgba(216,212,192,.55);font-weight:600;margin-top:8px;}
+
+        /* ── SERVICES ── */
+        #services-section{background:var(--olive);padding:100px 0;}
+        .services-inner{max-width:1400px;margin:0 auto;padding:0 50px;}
+        .services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+        .service-item{background:var(--olive-dark);padding:48px 36px;transition:background .3s ease;cursor:none;position:relative;overflow:hidden;}
+        .service-item::after{content:'';position:absolute;bottom:0;left:0;height:2px;width:0;background:var(--brown);transition:width .5s ease;}
+        .service-item:hover::after{width:100%;}
+        .service-item:hover{background:var(--olive-light);}
+        .svc-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:4.5rem;color:rgba(216,212,192,.07);line-height:1;margin-bottom:20px;}
+        .svc-icon{font-size:1.7rem;margin-bottom:18px;display:block;}
+        .svc-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.5rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:14px;}
+        .svc-desc{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);line-height:1.95;font-weight:600;}
+        .svc-arrow{display:inline-block;margin-top:26px;font-size:1.2rem;color:var(--cream-dark);transition:transform .3s,color .3s;}
+        .service-item:hover .svc-arrow{transform:translate(4px,-4px);color:var(--cream);}
+
+        /* ── PORTFOLIO ── */
+        #portfolio-section{background:var(--dark);padding:100px 0;}
+        .portfolio-inner{max-width:1400px;margin:0 auto;padding:0 50px;}
+        .portfolio-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:60px;flex-wrap:wrap;gap:20px;}
+        .portfolio-filters{display:flex;gap:8px;flex-wrap:wrap;}
+        .filter-btn{padding:8px 20px;background:transparent;border:1px solid rgba(216,212,192,.2);color:var(--cream-dark);font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;font-weight:600;cursor:none;transition:all .3s;}
+        .filter-btn.active,.filter-btn:hover{background:var(--brown);border-color:var(--brown);color:var(--cream);}
+        .portfolio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;min-height:200px;}
+        .portfolio-card{background:var(--olive-dark);position:relative;overflow:hidden;cursor:none;opacity:0;transform:translateY(40px);transition:opacity .6s ease,transform .6s ease,background .3s;}
+        .portfolio-card.card-visible{opacity:1;transform:translateY(0);}
+        .portfolio-card:hover{background:var(--olive-light);}
+        .portfolio-thumb{width:100%;aspect-ratio:16/9;background:var(--olive);position:relative;overflow:hidden;}
+        .portfolio-thumb video,.portfolio-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease;}
+        .portfolio-card:hover .portfolio-thumb video,
+        .portfolio-card:hover .portfolio-thumb img{transform:scale(1.06);}
+        .thumb-placeholder{width:100%;height:100%;background:var(--olive-light);display:flex;align-items:center;justify-content:center;font-size:3rem;}
+        .play-overlay{position:absolute;inset:0;background:rgba(42,46,30,.6);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .4s;cursor:none;}
+        .portfolio-card:hover .play-overlay{opacity:1;}
+        .play-btn-circle{width:60px;height:60px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--dark);transform:scale(.7);transition:transform .4s;}
+        .portfolio-card:hover .play-btn-circle{transform:scale(1);}
+        .portfolio-card-info{padding:24px 26px;}
+        .portfolio-card-cat{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;letter-spacing:4px;text-transform:uppercase;color:var(--brown-light);font-weight:600;margin-bottom:8px;}
+        .portfolio-card-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.2rem;text-transform:uppercase;letter-spacing:1px;color:var(--cream);margin-bottom:10px;}
+        .portfolio-card-desc{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);line-height:1.8;font-weight:600;margin-bottom:18px;}
+        .card-actions{display:flex;gap:10px;flex-wrap:wrap;}
+        .action-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;font-family:'Barlow Condensed',sans-serif;font-size:.65rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;text-decoration:none;cursor:none;transition:all .3s;border:none;}
+        .btn-play{background:var(--brown);color:var(--cream);}
+        .btn-play:hover{background:var(--brown-light);transform:translateY(-2px);}
+        .btn-dl{background:transparent;border:1px solid rgba(216,212,192,.2)!important;color:var(--cream-dark);}
+        .btn-dl:hover{background:var(--olive-light);color:var(--cream);}
+        .empty-msg{grid-column:1/-1;text-align:center;padding:80px 20px;font-family:'Barlow Condensed',sans-serif;font-size:1rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+        .port-show-more-row{text-align:center;margin-top:30px;}
+        .port-show-more-btn{display:inline-flex;align-items:center;gap:12px;padding:14px 34px;background:transparent;border:1px solid rgba(216,212,192,.2);color:var(--cream-dark);font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:none;transition:all .3s;}
+        .port-show-more-btn:hover{border-color:var(--cream);color:var(--cream);background:rgba(216,212,192,.05);}
+
+        /* ── LIGHTBOX ── */
+        .lightbox{position:fixed;inset:0;background:rgba(20,23,14,.96);z-index:9000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s;padding:20px;}
+        .lightbox.open{opacity:1;pointer-events:all;}
+        .lightbox-inner{width:100%;max-width:900px;transform:scale(.92);transition:transform .4s;position:relative;}
+        .lightbox.open .lightbox-inner{transform:scale(1);}
+        .lightbox-inner video{width:100%;border-radius:4px;background:#000;max-height:75vh;}
+        .lightbox-inner iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:4px;}
+        .lightbox-meta{margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+        .lightbox-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.4rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);}
+        .lb-close{position:absolute;top:-50px;right:0;background:none;border:none;color:var(--cream);font-size:2rem;cursor:none;transition:transform .3s,color .3s;line-height:1;}
+        .lb-close:hover{transform:rotate(90deg);color:var(--brown-light);}
+        .lb-dl{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:var(--brown);color:var(--cream);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;transition:all .3s;cursor:none;border:none;}
+        .lb-dl:hover{background:var(--brown-light);transform:translateY(-2px);}
+
+        /* ── REVIEWS ── */
+        #reviews-section{background:var(--olive);padding:100px 0;}
+        .reviews-inner{max-width:1400px;margin:0 auto;padding:0 50px;}
+        .reviews-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:60px;flex-wrap:wrap;gap:20px;}
+        .reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:4px;}
+        .review-card{background:var(--olive-dark);padding:36px 30px;position:relative;transition:background .3s;opacity:0;transform:translateY(40px);transition:opacity .6s ease,transform .6s ease,background .3s;}
+        .review-card.card-visible{opacity:1;transform:translateY(0);}
+        .review-card:hover{background:var(--olive-light);}
+        .review-stars{display:flex;gap:4px;margin-bottom:18px;}
+        .review-stars i{font-size:.9rem;color:var(--brown-light);}
+        .review-stars i.empty{color:rgba(216,212,192,.2);}
+        .review-text{font-family:'Barlow Condensed',sans-serif;font-size:.78rem;letter-spacing:1.5px;color:var(--cream-dark);line-height:2;font-weight:600;text-transform:uppercase;margin-bottom:26px;font-style:italic;}
+        .review-author{display:flex;align-items:center;gap:14px;}
+        .review-avatar{width:46px;height:46px;border-radius:50%;border:2px solid var(--brown);background:var(--brown);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.1rem;color:var(--cream);flex-shrink:0;overflow:hidden;}
+        .review-avatar img{width:100%;height:100%;object-fit:cover;}
+        .review-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.9rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);}
+        .review-role{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+        .review-date{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-top:4px;}
+        .review-quote{position:absolute;top:22px;right:26px;font-size:2.5rem;color:rgba(216,212,192,.06);font-family:Georgia,serif;}
+        .show-more-row{text-align:center;margin-top:24px;margin-bottom:4px;}
+        .show-more-btn{display:inline-flex;align-items:center;gap:12px;padding:14px 34px;background:transparent;border:1px solid rgba(216,212,192,.2);color:var(--cream-dark);font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:none;transition:all .3s;}
+        .show-more-btn:hover{border-color:var(--cream);color:var(--cream);background:rgba(216,212,192,.05);}
+        .review-box{background:var(--olive-dark);padding:60px 50px;margin-top:4px;}
+        .review-box-head{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:40px;}
+        .review-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:16px;}
+        .f-group label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-bottom:10px;}
+        .f-group input,.f-group textarea,.f-group select{width:100%;padding:15px 18px;background:var(--dark);border:1px solid rgba(216,212,192,.1);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;outline:none;transition:border-color .3s;cursor:none;}
+        .f-group input:focus,.f-group textarea:focus,.f-group select:focus{border-color:var(--cream-dark);}
+        .f-group input::placeholder,.f-group textarea::placeholder{color:rgba(216,212,192,.28);}
+        .f-group textarea{height:100px;resize:vertical;}
+        .f-group select option{background:var(--dark);}
+
+        /* STAR PICKER */
+        .star-picker{display:flex;gap:8px;margin-bottom:4px;}
+        .star-picker i{font-size:1.8rem;color:rgba(216,212,192,.2);cursor:none;transition:color .2s,transform .2s;}
+        .star-picker i.hover{color:var(--brown-light);transform:scale(1.1);}
+        .star-picker i.lit{color:var(--brown-light);transform:scale(1.15);}
+
+        .avatar-area{border:1px dashed rgba(216,212,192,.2);padding:22px;text-align:center;cursor:none;transition:border-color .3s;position:relative;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+        .avatar-area:hover{border-color:var(--cream-dark);}
+        .avatar-area input{position:absolute;inset:0;opacity:0;cursor:none;width:100%;height:100%;}
+        .avatar-area-text{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+        .avatar-preview{width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:10px;display:none;border:2px solid var(--brown);}
+        .submit-btn{display:inline-flex;align-items:center;gap:20px;padding:20px 44px;background:var(--cream);color:var(--dark);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.85rem;letter-spacing:4px;text-transform:uppercase;cursor:none;transition:background .3s,transform .3s,color .3s;}
+        .submit-btn:hover{background:var(--brown);color:var(--cream);transform:translateY(-3px);}
+        .submit-row{display:flex;justify-content:flex-end;margin-top:16px;}
+
+        /* ── CONTACT ── */
+        #contact-section{background:var(--olive-dark);padding:100px 0 0;}
+        .contact-inner{max-width:1400px;margin:0 auto;padding:0 50px;}
+        .contact-big{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(4rem,9vw,11rem);text-transform:uppercase;letter-spacing:-4px;line-height:.85;color:var(--cream);margin-bottom:80px;}
+        .contact-big span{-webkit-text-stroke:1.5px var(--cream-dark);color:transparent;}
+        .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;}
+        .contact-card{background:var(--olive);padding:38px 36px;display:flex;align-items:center;gap:22px;text-decoration:none;color:var(--cream);transition:background .3s,transform .3s;cursor:none;}
+        .contact-card:hover{background:var(--olive-light);transform:translateX(6px);}
+        .cc-icon{width:52px;height:52px;background:var(--brown);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .cc-icon svg{width:24px;height:24px;fill:var(--cream);}
+        .cc-label{font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-bottom:5px;}
+        .cc-value{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:1px;color:var(--cream);}
+        .cc-arrow{margin-left:auto;font-size:1rem;color:var(--text-sm);transition:transform .3s,color .3s;}
+        .contact-card:hover .cc-arrow{transform:translate(4px,-4px);color:var(--cream);}
+        .contact-form-row{background:var(--olive);padding:60px 50px;margin-top:4px;}
+        .form-head{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:40px;}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:4px;}
+        .form-full{grid-column:1/-1;}
+
+        /* ── FOOTER ── */
+        footer{background:var(--dark);padding:38px 50px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(216,212,192,.07);}
+        .footer-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.5rem;text-transform:uppercase;letter-spacing:4px;color:var(--cream);cursor:none;user-select:none;}
+        .footer-copy{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+        .footer-socials{display:flex;gap:14px;}
+        .footer-social{width:38px;height:38px;border:1px solid rgba(216,212,192,.2);display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text-sm);transition:all .3s;cursor:none;}
+        .footer-social:hover{border-color:var(--cream);color:var(--cream);transform:translateY(-3px);}
+
+        /* ── ALERT POPUP ── */
+        .alert-popup{position:fixed;inset:0;background:rgba(20,23,14,.85);z-index:999999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;padding:20px;}
+        .alert-popup.open{opacity:1;pointer-events:all;}
+        .alert-box{background:var(--olive-dark);border:1px solid rgba(216,212,192,.15);padding:44px 40px;max-width:380px;width:100%;text-align:center;position:relative;z-index:1000000;}
+        .alert-icon{font-size:2.5rem;margin-bottom:16px;}
+        .alert-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;text-transform:uppercase;letter-spacing:3px;color:var(--cream);margin-bottom:10px;}
+        .alert-msg{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);font-weight:600;line-height:1.9;margin-bottom:28px;}
+        .alert-ok{padding:14px 36px;background:var(--cream);color:var(--dark);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.8rem;letter-spacing:4px;text-transform:uppercase;cursor:none;transition:all .3s;}
+        .alert-ok:hover{background:var(--brown);color:var(--cream);}
+
+        /* ── ADMIN LOGIN ── */
+        .admin-overlay{position:fixed;inset:0;background:rgba(20,23,14,.97);z-index:9500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s;}
+        .admin-overlay.open{opacity:1;pointer-events:all;}
+        .admin-login-box{background:var(--olive-dark);padding:60px 50px;width:100%;max-width:420px;border:1px solid rgba(216,212,192,.1);position:relative;transform:translateY(20px);transition:transform .4s;}
+        .admin-overlay.open .admin-login-box{transform:translateY(0);}
+        .alb-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2rem;text-transform:uppercase;letter-spacing:3px;color:var(--cream);margin-bottom:6px;}
+        .alb-sub{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-bottom:36px;}
+        .alb-field{margin-bottom:16px;}
+        .alb-field label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-bottom:8px;}
+        .alb-field input{width:100%;padding:14px 16px;background:var(--dark);border:1px solid rgba(216,212,192,.12);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;outline:none;transition:border-color .3s;cursor:none;}
+        .alb-field input:focus{border-color:var(--cream-dark);}
+        .alb-btn{width:100%;padding:16px;background:var(--cream);color:var(--dark);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.85rem;letter-spacing:4px;text-transform:uppercase;cursor:none;transition:all .3s;margin-top:10px;}
+        .alb-btn:hover{background:var(--brown-light);color:var(--cream);}
+        .alb-close{position:absolute;top:20px;right:24px;background:none;border:none;color:var(--cream-dark);font-size:1.6rem;cursor:none;transition:color .3s;}
+        .alb-close:hover{color:var(--cream);}
+        .alb-err{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#e06060;font-weight:600;margin-top:10px;display:none;}
+
+        /* ── ADMIN PANEL ── */
+        .admin-panel{position:fixed;inset:0;background:var(--dark);z-index:9600;opacity:0;pointer-events:none;transition:opacity .4s;overflow-y:auto;}
+        .admin-panel.open{opacity:1;pointer-events:all;}
+        .admin-inner{max-width:1100px;margin:0 auto;padding:60px 40px;}
+        .admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:50px;border-bottom:1px solid rgba(216,212,192,.1);padding-bottom:26px;}
+        .admin-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.6rem;text-transform:uppercase;letter-spacing:4px;color:var(--cream);}
+        .admin-logo span{color:var(--brown-light);}
+        .admin-logout{display:inline-flex;align-items:center;gap:10px;padding:10px 22px;background:var(--olive-dark);border:1px solid rgba(216,212,192,.15);color:var(--cream-dark);font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:none;transition:all .3s;}
+        .admin-logout:hover{background:var(--olive);color:var(--cream);}
+        .admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:40px;}
+        .a-stat{background:var(--olive-dark);padding:30px 28px;text-align:center;}
+        .a-stat-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:3.5rem;color:var(--cream);line-height:1;}
+        .a-stat-lbl{font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-top:6px;}
+        .admin-tabs{display:flex;gap:4px;margin-bottom:40px;flex-wrap:wrap;}
+        .a-tab{padding:12px 28px;background:var(--olive-dark);border:none;color:var(--text-sm);font-family:'Barlow Condensed',sans-serif;font-size:.72rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:none;transition:all .3s;}
+        .a-tab.active,.a-tab:hover{background:var(--brown);color:var(--cream);}
+        .a-tab-content{display:none;}
+        .a-tab-content.active{display:block;}
+
+        /* Upload */
+        .upload-box{background:var(--olive-dark);padding:40px;margin-bottom:30px;}
+        .upload-box h3{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:6px;}
+        .upload-box p{font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-bottom:26px;}
+        .src-toggle{display:flex;gap:4px;margin-bottom:24px;flex-wrap:wrap;}
+        .src-btn{padding:10px 22px;background:var(--dark);border:1px solid rgba(216,212,192,.15);color:var(--text-sm);font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:none;transition:all .3s;}
+        .src-btn.active{background:var(--brown);border-color:var(--brown);color:var(--cream);}
+        .upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+        .u-field label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-bottom:8px;}
+        .u-field input,.u-field select,.u-field textarea{width:100%;padding:14px 16px;background:var(--dark);border:1px solid rgba(216,212,192,.15);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.88rem;outline:none;transition:border-color .3s;cursor:none;}
+        .u-field input:focus,.u-field select:focus,.u-field textarea:focus{border-color:var(--cream-dark);}
+        .u-field select option{background:var(--dark);}
+        .u-field textarea{height:80px;resize:vertical;}
+        .drop-zone{border:2px dashed rgba(216,212,192,.2);padding:36px 20px;text-align:center;position:relative;background:var(--dark);transition:all .3s;cursor:none;}
+        .drop-zone:hover,.drop-zone.over{border-color:var(--brown-light);background:rgba(122,74,53,.1);}
+        .drop-zone input{position:absolute;inset:0;opacity:0;cursor:none;width:100%;height:100%;}
+        .drop-zone .dz-icon{font-size:2rem;display:block;margin-bottom:10px;}
+        .drop-zone .dz-text{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;color:var(--cream-dark);font-weight:700;}
+        .drop-zone .dz-sub{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-top:6px;}
+        .dz-chosen{display:none;margin-top:12px;padding:8px 14px;background:rgba(122,74,53,.25);border:1px solid rgba(122,74,53,.5);font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--cream);font-weight:700;}
+        .thumb-preview{width:100%;max-height:110px;object-fit:cover;margin-top:10px;display:none;border:1px solid rgba(216,212,192,.15);}
+        .url-panel{display:none;}
+        .url-panel.active{display:block;}
+        .file-panel{display:block;}
+        .file-panel.hide{display:none;}
+        .url-hint{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-top:8px;line-height:1.9;}
+        .prog-bar{display:none;margin-top:14px;}
+        .prog-track{height:3px;background:rgba(216,212,192,.1);border-radius:2px;overflow:hidden;}
+        .prog-fill{height:100%;background:var(--cream);width:0;transition:width .3s;}
+        .prog-text{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-top:8px;}
+        .upload-btn{display:inline-flex;align-items:center;gap:12px;padding:16px 36px;background:var(--cream);color:var(--dark);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.8rem;letter-spacing:4px;text-transform:uppercase;cursor:none;transition:all .3s;}
+        .upload-btn:hover{background:var(--brown);color:var(--cream);transform:translateY(-2px);}
+        .upload-btn:disabled{background:var(--olive);color:var(--text-sm);pointer-events:none;}
+
+        /* Admin list */
+        .a-list-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.2rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:16px;}
+        .a-list{display:flex;flex-direction:column;gap:4px;}
+        .a-list-item{background:var(--olive-dark);padding:18px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+        .a-thumb{width:80px;height:50px;flex-shrink:0;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;}
+        .a-thumb img{width:100%;height:100%;object-fit:cover;}
+        .a-info{flex:1;min-width:0;}
+        .a-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.92rem;text-transform:uppercase;color:var(--cream);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .a-meta{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+        .a-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+        .a-btn{padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-size:.6rem;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:none;transition:all .3s;border:none;}
+        .a-del{background:rgba(192,80,74,.15);border:1px solid rgba(192,80,74,.3)!important;color:#e06060;}
+        .a-del:hover{background:rgba(192,80,74,.3);border-color:#e06060!important;}
+        .a-approve{background:rgba(70,160,90,.15);border:1px solid rgba(70,160,90,.3)!important;color:#5cb85c;}
+        .a-approve:hover{background:rgba(70,160,90,.3);}
+        .a-badge{display:inline-block;padding:3px 10px;font-family:'Barlow Condensed',sans-serif;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-left:8px;}
+        .badge-pending{background:rgba(212,168,67,.15);color:#d4a843;border:1px solid rgba(212,168,67,.3);}
+        .badge-approved{background:rgba(70,160,90,.15);color:#5cb85c;border:1px solid rgba(70,160,90,.3);}
+        .a-empty{padding:28px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
+
+        /* Edit modal */
+        .edit-modal{position:fixed;inset:0;background:rgba(20,23,14,.95);z-index:9700;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;padding:20px;}
+        .edit-modal.open{opacity:1;pointer-events:all;}
+        .edit-modal-box{background:var(--olive-dark);padding:40px;width:100%;max-width:560px;border:1px solid rgba(216,212,192,.1);position:relative;max-height:90vh;overflow-y:auto;}
+        .edit-modal-box h3{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:24px;}
+        .edit-actions{display:flex;gap:10px;margin-top:20px;}
+        .edit-save{padding:14px 32px;background:var(--cream);color:var(--dark);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.78rem;letter-spacing:3px;text-transform:uppercase;cursor:none;transition:all .3s;}
+        .edit-save:hover{background:var(--brown);color:var(--cream);}
+        .edit-cancel{padding:14px 24px;background:transparent;border:1px solid rgba(216,212,192,.2);color:var(--cream-dark);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:3px;text-transform:uppercase;cursor:none;transition:all .3s;}
+        .edit-cancel:hover{border-color:var(--cream);color:var(--cream);}
+
+        /* Firebase loading */
+        .fb-loading{text-align:center;padding:40px;font-family:'Barlow Condensed',sans-serif;font-size:.8rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);}
+        .fb-loading i{font-size:1.5rem;margin-bottom:10px;display:block;animation:spin 1s linear infinite;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+
+        /* TOAST */
+        .toast{position:fixed;bottom:30px;right:30px;padding:16px 28px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:3px;text-transform:uppercase;z-index:999000;transform:translateY(80px);opacity:0;transition:all .4s cubic-bezier(.77,0,.175,1);pointer-events:none;}
+        .toast.show{transform:translateY(0);opacity:1;}
+        .toast.ok{background:var(--cream);color:var(--dark);}
+        .toast.err{background:#c0504a;color:#fff;}
+        .toast.good{background:#3d7a3d;color:#fff;}
+        .toast.info{background:var(--brown);color:var(--cream);}
+
+        /* REVEAL */
+        .reveal{opacity:0;transform:translateY(36px);transition:opacity .85s ease,transform .85s ease;}
+        .reveal.up{opacity:1;transform:translateY(0);}
+        .d1{transition-delay:.1s;}.d2{transition-delay:.2s;}.d3{transition-delay:.3s;}.d4{transition-delay:.4s;}
+
+        /* BACK TO TOP */
+        .back-to-top{position:fixed;bottom:30px;left:30px;width:44px;height:44px;background:var(--cream);color:var(--dark);border:none;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:none;transition:all .3s;z-index:8000;opacity:0;transform:translateY(10px);}
+        .back-to-top.show{opacity:1;transform:translateY(0);}
+        .back-to-top:hover{background:var(--brown);color:var(--cream);transform:translateY(-3px);}
+
+        /* RESPONSIVE */
+        @media(max-width:1100px){
+            .services-grid{grid-template-columns:1fr 1fr;}
+            .stats-band{grid-template-columns:repeat(2,1fr);}
+            .stat-col{border-right:none;border-bottom:1px solid rgba(216,212,192,.1);}
+            .portfolio-grid{grid-template-columns:1fr 1fr;}
+            .reviews-grid{grid-template-columns:1fr 1fr;}
+            .upload-grid{grid-template-columns:1fr;}
+            .admin-stats{grid-template-columns:repeat(2,1fr);}
+        }
+        @media(max-width:900px){
+            nav{padding:18px 24px;}
+            nav.scrolled{padding:12px 24px;}
+            .nav-center,.nav-links,.nav-dots{display:none;}
+            .mobile-menu-btn{display:flex;}
+            .hero-panel,.hero-photo{width:55%;}
+            .hero-line{font-size:clamp(3.5rem,12vw,8rem);}
+            .hero-bottom{grid-template-columns:1fr;padding:0 24px 40px;gap:20px;}
+            .hero-center-badge{display:none;}
+            .hero-right{text-align:left;}
+            .hero-tags{justify-content:flex-start;}
+            .skills-categories,.services-grid,.contact-grid,.form-grid,.portfolio-grid,.reviews-grid,.review-form-grid{grid-template-columns:1fr;}
+            .skills-inner,.services-inner,.contact-inner,.portfolio-inner,.reviews-inner{padding:0 24px;}
+            #skills-section,#services-section,#contact-section,#portfolio-section,#reviews-section{padding:70px 0;}
+            .skills-header,.portfolio-header,.reviews-header{flex-direction:column;align-items:flex-start;gap:20px;}
+            .contact-form-row,.review-box{padding:40px 24px;}
+            footer{flex-direction:column;gap:16px;text-align:center;}
+            .hero-text-block{padding:0 20px;}
+            .contact-big{font-size:clamp(3rem,10vw,7rem);}
+            .admin-inner{padding:30px 16px;}
+            .upload-box{padding:24px 20px;}
+            .admin-stats{grid-template-columns:1fr 1fr;}
+        }
+        @media(max-width:600px){
+            .hero-panel,.hero-photo{width:70%;}
+            .stats-band{grid-template-columns:1fr 1fr;padding:40px 24px;}
+            .portfolio-grid,.reviews-grid{grid-template-columns:1fr;}
+            .review-form-grid{grid-template-columns:1fr;}
+            .admin-stats{grid-template-columns:1fr 1fr;}
+        }
+    </style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cur"></div>
+<div class="cursor-ring" id="ring"></div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BACK TO TOP -->
+<!-- <button class="back-to-top" id="backToTop" title="Back to top">↑</button> -->
+
+<!-- ALERT POPUP — z-index above everything including cursor ring -->
+<div class="alert-popup" id="alertPopup">
+    <div class="alert-box">
+        <div class="alert-icon" id="alertIcon">⭐</div>
+        <div class="alert-title" id="alertTitle">Notice</div>
+        <div class="alert-msg" id="alertMsg"></div>
+        <button class="alert-ok" id="alertOk">Got it →</button>
+    </div>
+</div>
+
+<!-- NAV -->
+<nav id="mainNav">
+    <a href="#contact-section" class="nav-left">Start A Project &nbsp;↗</a>
+    <div class="nav-center">Syed Uzair</div>
+    <div class="nav-right">
+        <ul class="nav-links">
+            <li><a href="#skills-section">Skills</a></li>
+            <li><a href="#portfolio-section">Work</a></li>
+            <li><a href="#services-section">Services</a></li>
+            <li><a href="#reviews-section">Reviews</a></li>
+            <li><a href="#contact-section">Contact</a></li>
+        </ul>
+        <div class="nav-dots"><span></span><span></span><span></span><span></span></div>
+        <button class="mobile-menu-btn" id="menuBtn" aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<!-- MOBILE DRAWER -->
+<div class="mobile-drawer" id="drawer">
+    <a href="#skills-section" class="dl">Skills</a>
+    <a href="#portfolio-section" class="dl">Work</a>
+    <a href="#services-section" class="dl">Services</a>
+    <a href="#reviews-section" class="dl">Reviews</a>
+    <a href="#contact-section" class="dl">Contact</a>
+    <div class="mobile-drawer-footer">Syed Uzair · Video &amp; Photo Editor</div>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+    <div class="hero-panel"></div>
+    <div class="hero-photo">
+        <img class="mypho" src="IMG_6600 copy.HEIC" alt="Syed Uzair">
+    </div>
+    <div class="hero-text-block" id="heroText">
+        <span class="hero-line">Syed</span>
+        <span class="hero-line">Uzair</span>
+        <span class="hero-line">Video &amp;</span>
+        <span class="hero-line">Editor</span>
+    </div>
+    <div class="hero-bottom">
+        <div>
+            <p class="hero-desc">As a video &amp; photo editor, I focus on<br>producing top–notch and impactful<br>visual experiences.</p>
+            <p class="hero-desc" style="margin-top:14px">Syed's visual editing expertise<br>delivered with precision.</p>
+            <a href="#contact-section" class="hero-cta">Let's talk &nbsp;<span class="arr">→</span></a>
+        </div>
+        <div class="hero-center-badge">
+            <div class="badge-circle"><span class="badge-num">5+</span><span class="badge-sub">Years</span></div>
+        </div>
+        <div class="hero-right">
+            <p class="hero-right-desc">A cutting–edge visual content studio<br>designed to elevate brands through<br>exceptional video &amp; photo editing.</p>
+            <p class="hero-right-desc" style="margin-top:14px">Exceptional quality and<br>creative visual storytelling.</p>
+            <div class="hero-tags">
+                <span class="hero-tag">Video Editing</span>
+                <span class="hero-tag">2024</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SKILLS -->
+<div id="skills-section">
+    <div class="skills-inner">
+        <div class="skills-header">
+            <div>
+                <div class="section-label reveal">Expertise</div>
+                <h2 class="section-title reveal d1">Tools &amp;<br><span class="outline">Mastery</span></h2>
+            </div>
+            <p class="skills-desc reveal d2">Industry–leading tools mastered<br>across video and photo editing<br>for premium results.</p>
+        </div>
+        <div class="skills-categories">
+            <div class="skill-cat reveal d1">
+                <div class="skill-cat-header"><div class="cat-num">01</div><div class="cat-info"><h3>Video Editing</h3><p>Professional video tools</p></div></div>
+                <div class="skill-list">
+                    <div class="skill-row"><span class="skill-name">Premiere Pro</span><div class="skill-track"><div class="skill-fill" data-w="92"></div></div><span class="skill-pct">92%</span></div>
+                    <div class="skill-row"><span class="skill-name">After Effects</span><div class="skill-track"><div class="skill-fill" data-w="88"></div></div><span class="skill-pct">88%</span></div>
+                    <div class="skill-row"><span class="skill-name">DaVinci Resolve</span><div class="skill-track"><div class="skill-fill" data-w="85"></div></div><span class="skill-pct">85%</span></div>
+                    <div class="skill-row"><span class="skill-name">CapCut</span><div class="skill-track"><div class="skill-fill" data-w="96"></div></div><span class="skill-pct">96%</span></div>
+                    <div class="skill-row"><span class="skill-name">VN Editor</span><div class="skill-track"><div class="skill-fill" data-w="91"></div></div><span class="skill-pct">91%</span></div>
+                </div>
+            </div>
+            <div class="skill-cat reveal d2">
+                <div class="skill-cat-header"><div class="cat-num">02</div><div class="cat-info"><h3>Photo Editing</h3><p>Professional photo tools</p></div></div>
+                <div class="skill-list">
+                    <div class="skill-row"><span class="skill-name">Lightroom</span><div class="skill-track"><div class="skill-fill" data-w="93"></div></div><span class="skill-pct">93%</span></div>
+                    <div class="skill-row"><span class="skill-name">Snapseed</span><div class="skill-track"><div class="skill-fill" data-w="97"></div></div><span class="skill-pct">97%</span></div>
+                    <div class="skill-row"><span class="skill-name">PicsArt</span><div class="skill-track"><div class="skill-fill" data-w="91"></div></div><span class="skill-pct">91%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-band">
+    <div class="stat-col reveal"><div class="stat-num" data-count="150">0</div><div class="stat-lbl">Projects Done</div></div>
+    <div class="stat-col reveal d1"><div class="stat-num" data-count="80">0</div><div class="stat-lbl">Happy Clients</div></div>
+    <div class="stat-col reveal d2"><div class="stat-num" data-count="5">0</div><div class="stat-lbl">Years Experience</div></div>
+    <div class="stat-col reveal d3"><div class="stat-num" data-count="8">0</div><div class="stat-lbl">Tools Mastered</div></div>
+</div>
+
+<!-- SERVICES -->
+<div id="services-section">
+    <div class="services-inner">
+        <div class="section-label reveal">What I Offer</div>
+        <h2 class="section-title reveal d1">My<br><span class="outline">Services</span></h2>
+        <div class="services-grid">
+            <div class="service-item reveal"><div class="svc-num">01</div><span class="svc-icon">🎬</span><div class="svc-title">Video Editing</div><p class="svc-desc">Professional cuts, seamless transitions, and cinematic storytelling that keeps audiences engaged.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d1"><div class="svc-num">02</div><span class="svc-icon">✨</span><div class="svc-title">Motion Graphics</div><p class="svc-desc">Eye–catching animations and visual effects using After Effects that elevate your content.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d2"><div class="svc-num">03</div><span class="svc-icon">🎨</span><div class="svc-title">Color Grading</div><p class="svc-desc">Professional color correction with DaVinci Resolve achieving cinematic looks for your brand.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d1"><div class="svc-num">04</div><span class="svc-icon">📸</span><div class="svc-title">Photo Retouching</div><p class="svc-desc">Detailed enhancement with Lightroom and Snapseed making every shot look professionally polished.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d2"><div class="svc-num">05</div><span class="svc-icon">📱</span><div class="svc-title">Short–Form Content</div><p class="svc-desc">Viral–ready Reels, TikToks and YouTube Shorts optimised for maximum engagement.</p><span class="svc-arrow">↗</span></div>
+            <div class="service-item reveal d3"><div class="svc-num">06</div><span class="svc-icon">🖼</span><div class="svc-title">Social Media Design</div><p class="svc-desc">Creative composites for posts, thumbnails and banners that build your visual identity.</p><span class="svc-arrow">↗</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- PORTFOLIO -->
+<div id="portfolio-section">
+    <div class="portfolio-inner">
+        <div class="portfolio-header">
+            <div>
+                <div class="section-label reveal">My Work</div>
+                <h2 class="section-title reveal d1" style="margin-bottom:0">Edited<br><span class="outline">Videos</span></h2>
+            </div>
+            <div class="portfolio-filters reveal d2" id="filterBtns">
+                <button class="filter-btn active" data-f="all">All</button>
+                <button class="filter-btn" data-f="video">Video Edit</button>
+                <button class="filter-btn" data-f="short">Short Form</button>
+                <button class="filter-btn" data-f="color">Color Grade</button>
+                <button class="filter-btn" data-f="motion">Motion</button>
+            </div>
+        </div>
+        <div class="portfolio-grid" id="portfolioGrid">
+            <div class="fb-loading" style="grid-column:1/-1"><i class="fa-solid fa-circle-notch"></i>Loading portfolio…</div>
+        </div>
+        <div class="port-show-more-row" id="portShowMoreRow" style="display:none;">
+            <button class="port-show-more-btn" id="portShowMoreBtn">Show More Work &nbsp;↓</button>
+        </div>
+    </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+    <div class="lightbox-inner" id="lightboxInner"></div>
+</div>
+
+<!-- REVIEWS -->
+<div id="reviews-section">
+    <div class="reviews-inner">
+        <div class="reviews-header">
+            <div>
+                <div class="section-label reveal">Testimonials</div>
+                <h2 class="section-title reveal d1" style="margin-bottom:0">Client<br><span class="outline">Reviews</span></h2>
+            </div>
+            <div class="reveal d2">
+                <p class="skills-desc">Real feedback from real clients.<br>Share your experience too.</p>
+            </div>
+        </div>
+        <div class="reviews-grid" id="reviewsGrid">
+            <div class="fb-loading" style="grid-column:1/-1"><i class="fa-solid fa-circle-notch"></i>Loading reviews…</div>
+        </div>
+        <div class="show-more-row" id="showMoreRow" style="display:none;">
+            <button class="show-more-btn" id="showMoreBtn">Show More Reviews &nbsp;↓</button>
+        </div>
+        <div class="review-box reveal">
+            <div class="review-box-head">Leave a Review →</div>
+            <form id="reviewForm" novalidate>
+                <div style="margin-bottom:20px">
+                    <label style="font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:4px;text-transform:uppercase;color:var(--text-sm);font-weight:600;display:block;margin-bottom:12px;">Your Rating *</label>
+                    <div class="star-picker" id="starPicker">
+                        <i class="fa-solid fa-star" data-v="1"></i>
+                        <i class="fa-solid fa-star" data-v="2"></i>
+                        <i class="fa-solid fa-star" data-v="3"></i>
+                        <i class="fa-solid fa-star" data-v="4"></i>
+                        <i class="fa-solid fa-star" data-v="5"></i>
+                    </div>
+                </div>
+                <div class="review-form-grid">
+                    <div class="f-group"><label>Full Name *</label><input type="text" id="rName" placeholder="John Doe" autocomplete="name"></div>
+                    <div class="f-group"><label>Role / Title</label><input type="text" id="rRole" placeholder="Content Creator"></div>
+                    <div class="f-group"><label>Your Review *</label><textarea id="rText" placeholder="Share your experience..."></textarea></div>
+                    <div class="f-group">
+                        <label>Profile Photo (optional)</label>
+                        <div class="avatar-area" id="avatarArea">
+                            <input type="file" id="avatarInput" accept="image/*">
+                            <img id="avatarPrev" class="avatar-preview" alt="">
+                            <div class="avatar-area-text" id="avatarAreaText">📷 Click to add photo</div>
+                            <div style="font-family:'Barlow Condensed',sans-serif;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-sm);font-weight:600;margin-top:4px;">JPG, PNG · Max 2MB</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="submit-row">
+                    <button type="submit" class="submit-btn" id="reviewSubmitBtn">Submit Review &nbsp;→</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CONTACT -->
+<div id="contact-section">
+    <div class="contact-inner">
+        <div class="section-label reveal">Let's Connect</div>
+        <div class="contact-big reveal d1">Get<br>In <span>Touch</span></div>
+        <div class="contact-grid">
+            <a href="https://www.instagram.com/syed_uzair102/" target="_blank" class="contact-card reveal">
+                <div class="cc-icon"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+                <div><div class="cc-label">Instagram</div><div class="cc-value">@syed_uzair102</div></div>
+                <span class="cc-arrow">↗</span>
+            </a>
+            <a href="https://www.linkedin.com/in/syed-uzair-570422350/" target="_blank" class="contact-card reveal d1">
+                <div class="cc-icon"><svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></div>
+                <div><div class="cc-label">LinkedIn</div><div class="cc-value">Syed Uzair</div></div>
+                <span class="cc-arrow">↗</span>
+            </a>
+            <a href="mailto:syeduzairrrr102@gmail.com" class="contact-card reveal d2">
+                <div class="cc-icon"><svg viewBox="0 0 24 24"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg></div>
+                <div><div class="cc-label">Email</div><div class="cc-value">syeduzairrrr102@gmail.com</div></div>
+                <span class="cc-arrow">↗</span>
+            </a>
+            <a href="https://github.com/uzairrrr102" target="_blank" class="contact-card reveal d3">
+                <div class="cc-icon"><svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></div>
+                <div><div class="cc-label">GitHub</div><div class="cc-value">uzairrrr102</div></div>
+                <span class="cc-arrow">↗</span>
+            </a>
+        </div>
+        <div class="contact-form-row reveal">
+            <div class="form-head">Send a Message →</div>
+            <form id="contactForm" onsubmit="handleContactForm(event)">
+                <div class="form-grid">
+                    <div class="f-group"><label>First Name</label><input type="text" placeholder="John" required></div>
+                    <div class="f-group"><label>Last Name</label><input type="text" placeholder="Doe" required></div>
+                    <div class="f-group"><label>Email</label><input type="email" placeholder="john@email.com" required></div>
+                    <div class="f-group"><label>Service</label><select><option value="">Select service</option><option>Video Editing</option><option>Motion Graphics</option><option>Color Grading</option><option>Photo Retouching</option><option>Short-Form Content</option><option>Social Media Design</option></select></div>
+                    <div class="f-group"><label>Phone (Optional)</label><input type="tel" placeholder="+92 300 000 0000"></div>
+                    <div class="f-group"><label>Budget</label><select><option value="">Select budget</option><option>Under $50</option><option>$50 – $200</option><option>$200 – $500</option><option>$500+</option></select></div>
+                    <div class="f-group form-full"><label>Message</label><textarea placeholder="Tell me about your project..." required></textarea></div>
+                </div>
+                <div class="submit-row"><button type="submit" class="submit-btn">Send Message &nbsp;→</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-logo" id="adminTrigger">S.U</div>
+    <div class="footer-copy">© 2024 Syed Uzair — All rights reserved</div>
+    <div class="footer-socials">
+        <a href="https://www.instagram.com/syed_uzair102/" target="_blank" class="footer-social"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.linkedin.com/in/syed-uzair-570422350/" target="_blank" class="footer-social"><i class="fa-brands fa-linkedin-in"></i></a>
+        <a href="https://github.com/uzairrrr102" target="_blank" class="footer-social"><i class="fa-brands fa-github"></i></a>
+        <a href="mailto:syeduzairrrr102@gmail.com" class="footer-social"><i class="fa-solid fa-envelope"></i></a>
+    </div>
+</footer>
+
+<!-- ADMIN LOGIN -->
+<div class="admin-overlay" id="adminOverlay">
+    <div class="admin-login-box">
+        <button class="alb-close" id="albClose">✕</button>
+        <div class="alb-title">Admin Access</div>
+        <div class="alb-sub">Manage portfolio &amp; reviews</div>
+        <div class="alb-field"><label>Username</label><input type="text" id="albUser" placeholder="admin" autocomplete="off"></div>
+        <div class="alb-field"><label>Password</label><input type="password" id="albPass" placeholder="••••••••" autocomplete="off"></div>
+        <div class="alb-err" id="albErr">Incorrect credentials. Try again.</div>
+        <button class="alb-btn" id="albLogin">Login →</button>
+    </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel">
+    <div class="admin-inner">
+        <div class="admin-header">
+            <div class="admin-logo">S.U &nbsp;<span>Admin</span></div>
+            <button class="admin-logout" id="adminLogout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</button>
+        </div>
+        <div class="admin-stats">
+            <div class="a-stat"><div class="a-stat-num" id="as1">0</div><div class="a-stat-lbl">Videos</div></div>
+            <div class="a-stat"><div class="a-stat-num" id="as2">0</div><div class="a-stat-lbl">Reviews</div></div>
+            <div class="a-stat"><div class="a-stat-num" id="as3">0.0</div><div class="a-stat-lbl">Avg Rating</div></div>
+            <div class="a-stat"><div class="a-stat-num" id="as4">0</div><div class="a-stat-lbl">Pending</div></div>
+        </div>
+        <div class="admin-tabs">
+            <button class="a-tab active" data-tab="videos">📹 Videos</button>
+            <button class="a-tab" data-tab="reviews">⭐ Reviews</button>
+        </div>
+
+        <!-- VIDEOS TAB -->
+        <div class="a-tab-content active" id="tab-videos">
+            <div class="upload-box">
+                <h3>Add Video to Portfolio</h3>
+                <p>Upload a file to Firebase Storage OR paste a YouTube / Vimeo / direct MP4 URL</p>
+                <div class="src-toggle">
+                    <button class="src-btn active" id="btnSrcFile" type="button">📁 Upload File</button>
+                    <button class="src-btn" id="btnSrcUrl" type="button">🔗 Paste URL</button>
+                </div>
+                <form id="videoForm" novalidate>
+                    <div class="upload-grid">
+                        <div class="u-field"><label>Video Title *</label><input type="text" id="vTitle" placeholder="Cinematic Brand Reel"></div>
+                        <div class="u-field"><label>Category *</label><select id="vCat"><option value="">Select category</option><option value="video">Video Edit</option><option value="short">Short Form</option><option value="color">Color Grade</option><option value="motion">Motion</option></select></div>
+                        <div class="u-field"><label>Client / Project</label><input type="text" id="vClient" placeholder="Brand Name"></div>
+                        <div class="u-field"><label>Description</label><textarea id="vDesc" placeholder="Brief description..."></textarea></div>
+                    </div>
+                    <!-- FILE PANEL -->
+                    <div class="file-panel" id="filePanel">
+                        <div class="u-field" style="margin-bottom:14px">
+                            <label>Video File * (MP4, MOV, WEBM)</label>
+                            <div class="drop-zone" id="dropZoneVideo">
+                                <input type="file" id="vFile" accept="video/*">
+                                <span class="dz-icon">🎬</span>
+                                <div class="dz-text">Click to choose or drop video here</div>
+                                <div class="dz-sub">MP4 · MOV · WEBM — stored permanently on Firebase</div>
+                                <div class="dz-chosen" id="vFileLabel"></div>
+                            </div>
+                        </div>
+                        <div class="u-field" style="margin-bottom:14px">
+                            <label>Thumbnail (optional — auto-generated for YouTube)</label>
+                            <div class="drop-zone" id="dropZoneThumb">
+                                <input type="file" id="vThumb" accept="image/*">
+                                <span class="dz-icon">🖼</span>
+                                <div class="dz-text">Click to choose thumbnail</div>
+                                <div class="dz-sub">JPG · PNG · Max 5MB</div>
+                                <div class="dz-chosen" id="vThumbLabel"></div>
+                            </div>
+                            <img id="thumbPreview" class="thumb-preview" alt="">
+                        </div>
+                        <div class="prog-bar" id="progBar">
+                            <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+                            <div class="prog-text" id="progText">Uploading to Firebase…</div>
+                        </div>
+                    </div>
+                    <!-- URL PANEL -->
+                    <div class="url-panel" id="urlPanel">
+                        <div class="u-field" style="margin-bottom:14px">
+                            <label>Video URL * (YouTube / Vimeo / Direct MP4)</label>
+                            <input type="url" id="vUrl" placeholder="https://youtube.com/watch?v=... or https://example.com/video.mp4">
+                            <div class="url-hint">✓ YouTube &nbsp;·&nbsp; ✓ Vimeo &nbsp;·&nbsp; ✓ Direct MP4 &nbsp;·&nbsp; ✓ Google Drive (Share → Anyone with link)</div>
+                        </div>
+                        <div class="u-field" style="margin-bottom:14px">
+                            <label>Thumbnail URL (optional)</label>
+                            <input type="url" id="vThumbUrl" placeholder="https://example.com/thumb.jpg">
+                        </div>
+                    </div>
+                    <button type="submit" class="upload-btn" id="uploadBtn"><i class="fa-solid fa-plus"></i> Add to Portfolio</button>
+                </form>
+            </div>
+            <div class="a-list-title">Portfolio Videos (<span id="vcCount">0</span>)</div>
+            <div class="a-list" id="videoList"></div>
+        </div>
+
+        <!-- REVIEWS TAB -->
+        <div class="a-tab-content" id="tab-reviews">
+            <div class="a-list-title">All Reviews (<span id="rcCount">0</span>)</div>
+            <div class="a-list" id="reviewList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT REVIEW MODAL -->
+<div class="edit-modal" id="editModal">
+    <div class="edit-modal-box">
+        <button class="alb-close" id="editModalClose">✕</button>
+        <h3>Edit Review</h3>
+        <input type="hidden" id="editId">
+        <div class="f-group" style="margin-bottom:12px"><label>Name</label><input type="text" id="editName" style="width:100%;padding:13px 16px;background:var(--dark);border:1px solid rgba(216,212,192,.1);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;outline:none;"></div>
+        <div class="f-group" style="margin-bottom:12px"><label>Role</label><input type="text" id="editRole" style="width:100%;padding:13px 16px;background:var(--dark);border:1px solid rgba(216,212,192,.1);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;outline:none;"></div>
+        <div class="f-group" style="margin-bottom:12px"><label>Review Text</label><textarea id="editText" style="height:80px;resize:vertical;width:100%;padding:13px 16px;background:var(--dark);border:1px solid rgba(216,212,192,.1);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;outline:none;"></textarea></div>
+        <div class="f-group" style="margin-bottom:12px">
+            <label>Rating</label>
+            <select id="editStars" style="width:100%;padding:13px 16px;background:var(--dark);border:1px solid rgba(216,212,192,.1);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;outline:none;cursor:none;">
+                <option value="5">★★★★★ — 5 Stars</option>
+                <option value="4">★★★★☆ — 4 Stars</option>
+                <option value="3">★★★☆☆ — 3 Stars</option>
+                <option value="2">★★☆☆☆ — 2 Stars</option>
+                <option value="1">★☆☆☆☆ — 1 Star</option>
+            </select>
+        </div>
+        <div class="edit-actions">
+            <button class="edit-save" id="editSave">Save Changes</button>
+            <button class="edit-cancel" id="editCancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   FIREBASE CONFIG — replace with your real config!
+   Go to: console.firebase.google.com
+   → Create project → Add web app → copy config below
+═══════════════════════════════════════════════════ */
+const firebaseConfig = {
+    apiKey: "AIzaSyCv8ZYdHK6Bar3Su4Y4q26uc1w3OQJabwQ",
+    authDomain: "syed-uzair-portfolio.firebaseapp.com",
+    projectId: "syed-uzair-portfolio",
+    storageBucket: "syed-uzair-portfolio.firebasestorage.app",
+    messagingSenderId: "354658194426",
+    appId: "1:354658194426:web:4a31e4d975ddddc8750a43"
+};
+
+// Debug: show config is (still) placeholder
+console.log('[Firebase] firebaseConfig=', firebaseConfig);
+
+try {
+    firebase.initializeApp(firebaseConfig);
+} catch (e) {
+    console.warn('[Firebase] initializeApp error (may be already initialized):', e);
+}
+
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// Debug: test connections early
+(async () => {
+    // listCollections is NOT available in the compat SDK. Use a harmless read instead.
+    try {
+        console.log('[Firebase] Testing Firestore connectivity...');
+        const snap = await db.collection('portfolioVideos').limit(1).get();
+        console.log('[Firebase] Firestore reachable. Docs:', snap.size);
+    } catch (e) {
+        console.error('[Firebase] Firestore connection failed:', e);
+        toast('Firebase not reachable (Firestore). Check config/rules.','err');
+    }
+    try {
+        console.log('[Firebase] Storage bucket=', storage.app.options.storageBucket);
+    } catch (e) {
+        console.error('[Firebase] Storage bucket debug failed:', e);
+    }
+})();
+
+/* ═══════════════════════════════════════════════════
+   ADMIN CREDENTIALS
+═══════════════════════════════════════════════════ */
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'uzair2024';   // ← change this!
+
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+const REVIEWS_PER_PAGE   = 6;
+const PORTFOLIO_PER_PAGE = 6;
+
+let allVideos      = [];
+let allReviews     = [];
+let shownReviews   = REVIEWS_PER_PAGE;
+let shownPortfolio = PORTFOLIO_PER_PAGE;
+let activeFilter   = 'all';
+let selectedStars  = 0;
+let avatarDataUrl  = '';
+let drawerOpen     = false;
+
+/* ═══════════════════════════════════════════════════
+   CURSOR — z-index 999999 (above everything)
+═══════════════════════════════════════════════════ */
+const cur  = document.getElementById('cur');
+const ring = document.getElementById('ring');
+let mx=0,my=0,rx=0,ry=0;
+
+document.addEventListener('mousemove',e=>{
+    mx=e.clientX; my=e.clientY;
+    cur.style.left=mx+'px'; cur.style.top=my+'px';
+});
+(function lerpRing(){
+    rx+=(mx-rx)*.1; ry+=(my-ry)*.1;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(lerpRing);
+})();
+
+function addHover(){
+    document.querySelectorAll('a,button,.service-item,.contact-card,.skill-cat,.portfolio-card,.review-card,.filter-btn,.src-btn,.a-tab,.a-btn,.star-picker i,.footer-social,.show-more-btn,.port-show-more-btn,.action-btn,.lb-dl,.back-to-top,.alert-ok').forEach(el=>{
+        el.removeEventListener('mouseenter',onHoverIn);
+        el.removeEventListener('mouseleave',onHoverOut);
+        el.addEventListener('mouseenter',onHoverIn);
+        el.addEventListener('mouseleave',onHoverOut);
+    });
+}
+function onHoverIn(){ ring.classList.add('expand'); }
+function onHoverOut(){ ring.classList.remove('expand'); }
+addHover();
+
+/* ═══════════════════════════════════════════════════
+   ALERT POPUP
+═══════════════════════════════════════════════════ */
+function showAlert(icon,title,msg){
+    document.getElementById('alertIcon').textContent  = icon;
+    document.getElementById('alertTitle').textContent = title;
+    document.getElementById('alertMsg').textContent   = msg;
+    document.getElementById('alertPopup').classList.add('open');
+}
+document.getElementById('alertOk').addEventListener('click',()=>{
+    document.getElementById('alertPopup').classList.remove('open');
+});
+
+/* ═══════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════ */
+function toast(msg,type='ok'){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.className='toast '+type+' show';
+    setTimeout(()=>t.classList.remove('show'),3400);
+}
+
+// /* ═══════════════════════════════════════════════════
+//    BACK TO TOP
+// ═══════════════════════════════════════════════════ */
+// const btt=document.getElementById('backToTop');
+// window.addEventListener('scroll',()=>{
+//     btt.classList.toggle('show',scrollY>500);
+//     document.getElementById('mainNav').classList.toggle('scrolled',scrollY>60);
+// });
+// btt.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+
+/* ═══════════════════════════════════════════════════
+   MOBILE DRAWER
+═══════════════════════════════════════════════════ */
+const menuBtn=document.getElementById('menuBtn');
+const drawer =document.getElementById('drawer');
+
+function toggleDrawer(force){
+    drawerOpen = force!==undefined ? force : !drawerOpen;
+    menuBtn.classList.toggle('open',drawerOpen);
+    drawer.classList.toggle('open',drawerOpen);
+    document.body.style.overflow = drawerOpen?'hidden':'';
+}
+menuBtn.addEventListener('click',()=>toggleDrawer());
+drawer.querySelectorAll('a.dl').forEach(a=>a.addEventListener('click',()=>toggleDrawer(false)));
+
+/* ═══════════════════════════════════════════════════
+   HERO PARALLAX
+═══════════════════════════════════════════════════ */
+const heroEl  =document.getElementById('hero');
+const heroText=document.getElementById('heroText');
+heroEl.addEventListener('mousemove',e=>{
+    const {left,top,width,height}=heroEl.getBoundingClientRect();
+    const xR=(e.clientX-left)/width-.5, yR=(e.clientY-top)/height-.5;
+    heroText.style.transform=`translateY(-50%) translate(${xR*16}px,${yR*16}px)`;
+});
+heroEl.addEventListener('mouseleave',()=>{
+    heroText.style.transition='transform .8s ease';
+    heroText.style.transform='translateY(-50%)';
+    setTimeout(()=>heroText.style.transition='',820);
+});
+
+/* Card tilt */
+document.querySelectorAll('.service-item,.skill-cat').forEach(c=>{
+    c.addEventListener('mousemove',e=>{
+        const r=c.getBoundingClientRect(),
+              x=((e.clientX-r.left)/r.width-.5)*2,
+              y=((e.clientY-r.top)/r.height-.5)*2;
+        c.style.transform=`perspective(800px) rotateX(${-y*4}deg) rotateY(${x*4}deg)`;
+    });
+    c.addEventListener('mouseleave',()=>{
+        c.style.transition='transform .55s ease,background .3s';
+        c.style.transform='perspective(800px) rotateX(0) rotateY(0)';
+        setTimeout(()=>c.style.transition='',560);
+    });
+});
+
+/* ═══════════════════════════════════════════════════
+   SCROLL REVEAL (generic .reveal)
+═══════════════════════════════════════════════════ */
+const revObs=new IntersectionObserver(entries=>
+    entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('up'); }),
+    {threshold:.12}
+);
+document.querySelectorAll('.reveal').forEach(el=>revObs.observe(el));
+
+/* ═══════════════════════════════════════════════════
+   CARD REVEAL (portfolio + review cards) — staggered
+═══════════════════════════════════════════════════ */
+function observeCards(){
+    const cardObs = new IntersectionObserver(entries=>{
+        entries.forEach(e=>{
+            if(e.isIntersecting){
+                // slight stagger based on position among siblings
+                const siblings=[...e.target.parentElement.children];
+                const idx=siblings.indexOf(e.target);
+                setTimeout(()=>e.target.classList.add('card-visible'), idx*80);
+                cardObs.unobserve(e.target);
+            }
+        });
+    },{threshold:.1});
+
+    document.querySelectorAll('.portfolio-card, .review-card').forEach(c=>{
+        c.classList.remove('card-visible');
+        cardObs.observe(c);
+    });
+}
+
+/* ═══════════════════════════════════════════════════
+   SKILL BARS
+═══════════════════════════════════════════════════ */
+document.querySelectorAll('.skill-fill').forEach(bar=>{
+    const io=new IntersectionObserver(en=>{
+        if(en[0].isIntersecting){ setTimeout(()=>bar.style.width=bar.dataset.w+'%',350); io.disconnect(); }
+    },{threshold:.4});
+    io.observe(bar);
+});
+
+/* ═══════════════════════════════════════════════════
+   COUNTERS
+═══════════════════════════════════════════════════ */
+function runCounter(el){
+    if(el.dataset.done) return; el.dataset.done=1;
+    const t=+el.dataset.count, step=t/(1800/16); let v=0;
+    const iv=setInterval(()=>{ v+=step; if(v>=t){el.textContent=t+'+';clearInterval(iv);}else el.textContent=Math.floor(v)+'+'; },16);
+}
+new IntersectionObserver(en=>en.forEach(e=>{
+    if(e.isIntersecting) e.target.querySelectorAll('.stat-num[data-count]').forEach(runCounter);
+}),{threshold:.25}).observe(document.querySelector('.stats-band'));
+
+/* ═══════════════════════════════════════════════════
+   SMOOTH ANCHORS
+═══════════════════════════════════════════════════ */
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+        const t=document.querySelector(a.getAttribute('href'));
+        if(t){ e.preventDefault(); t.scrollIntoView({behavior:'smooth'}); }
+    });
+});
+
+/* ═══════════════════════════════════════════════════
+   ADMIN — triple-click on S.U footer logo
+═══════════════════════════════════════════════════ */
+let clickCount=0, clickTimer=null;
+document.getElementById('adminTrigger').addEventListener('click',()=>{
+    clickCount++;
+    clearTimeout(clickTimer);
+    clickTimer=setTimeout(()=>clickCount=0,700);
+    if(clickCount>=3){ clickCount=0; openAdminLogin(); }
+});
+
+function openAdminLogin(){
+    document.getElementById('adminOverlay').classList.add('open');
+    setTimeout(()=>document.getElementById('albUser').focus(),400);
+}
+document.getElementById('albClose').addEventListener('click',()=>{
+    document.getElementById('adminOverlay').classList.remove('open');
+    clearAdminLogin();
+});
+document.getElementById('albLogin').addEventListener('click',doLogin);
+['albUser','albPass'].forEach(id=>{
+    document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+});
+
+function doLogin(){
+    const u=document.getElementById('albUser').value.trim();
+    const p=document.getElementById('albPass').value;
+    if(u===ADMIN_USER && p===ADMIN_PASS){
+        document.getElementById('adminOverlay').classList.remove('open');
+        clearAdminLogin();
+        openAdminPanel();
+    } else {
+        document.getElementById('albErr').style.display='block';
+        document.getElementById('albPass').value='';
+    }
+}
+function clearAdminLogin(){
+    document.getElementById('albUser').value='';
+    document.getElementById('albPass').value='';
+    document.getElementById('albErr').style.display='none';
+}
+
+/* ═══════════════════════════════════════════════════
+   ADMIN PANEL
+═══════════════════════════════════════════════════ */
+function openAdminPanel(){
+    document.getElementById('adminPanel').classList.add('open');
+    document.body.style.overflow='hidden';
+    refreshAdminStats();
+    renderVideoList();
+    renderAdminReviewList();
+}
+document.getElementById('adminLogout').addEventListener('click',()=>{
+    document.getElementById('adminPanel').classList.remove('open');
+    document.body.style.overflow='';
+});
+
+document.querySelectorAll('.a-tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        document.querySelectorAll('.a-tab').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.a-tab-content').forEach(c=>c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+});
+
+function refreshAdminStats(){
+    document.getElementById('as1').textContent = allVideos.length;
+    document.getElementById('as2').textContent = allReviews.length;
+    const approved = allReviews.filter(r=>r.approved);
+    const avg = approved.length
+        ? (approved.reduce((s,r)=>s+(parseInt(r.stars)||0),0)/approved.length).toFixed(1)
+        : '0.0';
+    document.getElementById('as3').textContent = avg;
+    document.getElementById('as4').textContent = allReviews.filter(r=>!r.approved).length;
+}
+
+/* ═══════════════════════════════════════════════════
+   VIDEO SOURCE TOGGLE
+═══════════════════════════════════════════════════ */
+document.getElementById('btnSrcFile').addEventListener('click',()=>{
+    document.getElementById('btnSrcFile').classList.add('active');
+    document.getElementById('btnSrcUrl').classList.remove('active');
+    document.getElementById('filePanel').classList.remove('hide');
+    document.getElementById('urlPanel').classList.remove('active');
+});
+document.getElementById('btnSrcUrl').addEventListener('click',()=>{
+    document.getElementById('btnSrcUrl').classList.add('active');
+    document.getElementById('btnSrcFile').classList.remove('active');
+    document.getElementById('filePanel').classList.add('hide');
+    document.getElementById('urlPanel').classList.add('active');
+});
+
+/* ═══════════════════════════════════════════════════
+   DROP ZONES
+═══════════════════════════════════════════════════ */
+function initDropZone(zoneId,inputId,onFile){
+    const zone=document.getElementById(zoneId);
+    zone.addEventListener('dragover',e=>{ e.preventDefault(); zone.classList.add('over'); });
+    zone.addEventListener('dragleave',()=>zone.classList.remove('over'));
+    zone.addEventListener('drop',e=>{
+        e.preventDefault(); zone.classList.remove('over');
+        const f=e.dataTransfer.files[0];
+        if(f){ const dt=new DataTransfer(); dt.items.add(f); document.getElementById(inputId).files=dt.files; onFile(f); }
+    });
+    document.getElementById(inputId).addEventListener('change',e=>{ if(e.target.files[0]) onFile(e.target.files[0]); });
+}
+
+initDropZone('dropZoneVideo','vFile',f=>{
+    const lbl=document.getElementById('vFileLabel');
+    lbl.textContent='✓ '+f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';
+    lbl.style.display='block';
+});
+
+initDropZone('dropZoneThumb','vThumb',f=>{
+    const lbl=document.getElementById('vThumbLabel');
+    lbl.textContent='✓ '+f.name;
+    lbl.style.display='block';
+    const reader=new FileReader();
+    reader.onload=ev=>{ const p=document.getElementById('thumbPreview'); p.src=ev.target.result; p.style.display='block'; };
+    reader.readAsDataURL(f);
+});
+
+/* ═══════════════════════════════════════════════════
+   ADD VIDEO — uploads to Firebase Storage + Firestore
+═══════════════════════════════════════════════════ */
+document.getElementById('videoForm').addEventListener('submit',e=>{ e.preventDefault(); addVideo(); });
+
+async function addVideo(){
+    const title  = document.getElementById('vTitle').value.trim();
+    const cat    = document.getElementById('vCat').value;
+    if(!title||!cat){ toast('Fill in title and category','err'); return; }
+
+    const btn=document.getElementById('uploadBtn');
+    btn.disabled=true; btn.textContent='Adding…';
+
+    const isUrl=document.getElementById('btnSrcUrl').classList.contains('active');
+
+    try{
+        if(isUrl){
+            const rawUrl = document.getElementById('vUrl').value.trim();
+            if(!rawUrl){ toast('Paste a video URL','err'); btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-plus"></i> Add to Portfolio'; return; }
+            const srcType   = detectUrlType(rawUrl);
+            const embedSrc  = parseVideoUrl(rawUrl,srcType);
+            const thumbSrc  = document.getElementById('vThumbUrl').value.trim() || getAutoThumb(rawUrl,srcType);
+
+            await db.collection('portfolioVideos').add({
+                title, cat,
+                client: document.getElementById('vClient').value.trim(),
+                desc:   document.getElementById('vDesc').value.trim(),
+                videoSrc: embedSrc,
+                rawUrl,
+                thumbSrc,
+                srcType,
+                ts: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            toast('✓ Video added!','good');
+            resetVideoForm();
+
+        } else {
+            const vf=document.getElementById('vFile').files[0];
+            if(!vf){ toast('Choose a video file','err'); btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-plus"></i> Add to Portfolio'; return; }
+
+            const prog=document.getElementById('progBar');
+            const fill=document.getElementById('progFill');
+            const progTxt=document.getElementById('progText');
+            prog.style.display='block';
+
+            // Upload video to Firebase Storage
+            console.log('[Upload] starting video upload', {
+                title,
+                cat,
+                fileName: vf.name,
+                fileSize: vf.size,
+                type: vf.type,
+            });
+
+            const videoRef = storage.ref('portfolio/videos/' + Date.now() + '_' + vf.name);
+            console.log('[Upload] storageRef=', videoRef.fullPath);
+
+            const uploadTask = videoRef.put(vf);
+
+            await new Promise((resolve,reject)=>{
+                uploadTask.on('state_changed',
+                    snap=>{
+                        const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100);
+                        fill.style.width=pct+'%';
+                        progTxt.textContent='Uploading… '+pct+'%';
+                        if(pct===0 || pct===100) console.log('[Upload] progress pct=', pct, snap.bytesTransferred, snap.totalBytes);
+                    },
+                    err=>{
+                        console.error('[Upload] uploadTask error:', err);
+                        reject(err);
+                    },
+                    ()=>{
+                        console.log('[Upload] uploadTask complete');
+                        resolve();
+                    }
+                );
+            });
+
+
+            fill.style.width='100%'; progTxt.textContent='Finalizing…';
+            const videoUrl=await uploadTask.snapshot.ref.getDownloadURL();
+
+            // Optional thumbnail
+            let thumbUrl='';
+            const tf=document.getElementById('vThumb').files[0];
+            if(tf){
+                const thumbRef=storage.ref('portfolio/thumbs/'+Date.now()+'_'+tf.name);
+                await thumbRef.put(tf);
+                thumbUrl=await thumbRef.getDownloadURL();
+            }
+
+            await db.collection('portfolioVideos').add({
+                title, cat,
+                client:  document.getElementById('vClient').value.trim(),
+                desc:    document.getElementById('vDesc').value.trim(),
+                videoSrc: videoUrl,
+                rawUrl:   videoUrl,
+                thumbSrc: thumbUrl,
+                storagePath: videoRef.fullPath,
+                srcType: 'file',
+                ts: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            prog.style.display='none'; fill.style.width='0';
+            toast('✓ Video uploaded & saved permanently!','good');
+            resetVideoForm();
+        }
+
+        // Reload
+        await loadVideos();
+        renderVideoList();
+        refreshAdminStats();
+
+    }catch(err){
+        console.error(err);
+toast('Error: '+(err?.message||err),'err'); console.error('[Upload] uploadTask catch error:', err);
+    } finally {
+        btn.disabled=false;
+        btn.innerHTML='<i class="fa-solid fa-plus"></i> Add to Portfolio';
+    }
+}
+
+function getAutoThumb(url,srcType){
+    if(srcType==='yt'){
+        const m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if(m) return 'https://img.youtube.com/vi/'+m[1]+'/hqdefault.jpg';
+    }
+    return '';
+}
+
+function parseVideoUrl(url,srcType){
+    if(srcType==='yt'){
+        const m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if(m) return 'https://www.youtube.com/embed/'+m[1]+'?autoplay=1&rel=0';
+    }
+    if(srcType==='vimeo'){
+        const m=url.match(/vimeo\.com\/(\d+)/);
+        if(m) return 'https://player.vimeo.com/video/'+m[1]+'?autoplay=1';
+    }
+    if(srcType==='gdrive'){
+        const m=url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+        if(m) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+    }
+    return url;
+}
+
+function detectUrlType(url){
+    if(/youtube\.com|youtu\.be/.test(url))   return 'yt';
+    if(/vimeo\.com/.test(url))               return 'vimeo';
+    if(/drive\.google\.com/.test(url))       return 'gdrive';
+    return 'direct';
+}
+
+function resetVideoForm(){
+    document.getElementById('vTitle').value='';
+    document.getElementById('vCat').value='';
+    document.getElementById('vClient').value='';
+    document.getElementById('vDesc').value='';
+    document.getElementById('vFile').value='';
+    document.getElementById('vThumb').value='';
+    document.getElementById('vUrl').value='';
+    document.getElementById('vThumbUrl').value='';
+    document.getElementById('vFileLabel').style.display='none';
+    document.getElementById('vThumbLabel').style.display='none';
+    document.getElementById('thumbPreview').style.display='none';
+    document.getElementById('progBar').style.display='none';
+}
+
+/* ═══════════════════════════════════════════════════
+   LOAD VIDEOS FROM FIRESTORE
+═══════════════════════════════════════════════════ */
+async function loadVideos(){
+    try{
+        const snap=await db.collection('portfolioVideos').orderBy('ts','desc').get();
+        allVideos=snap.docs.map(d=>({id:d.id,...d.data()}));
+    }catch(e){ console.error('loadVideos',e); }
+}
+
+/* ═══════════════════════════════════════════════════
+   DELETE VIDEO
+═══════════════════════════════════════════════════ */
+async function deleteVideo(id){
+    if(!confirm('Delete this video permanently?')) return;
+    const v=allVideos.find(x=>x.id===id);
+    try{
+        // Delete from storage if file upload
+        if(v && v.storagePath){
+            try{ await storage.ref(v.storagePath).delete(); }catch(e){}
+        }
+        await db.collection('portfolioVideos').doc(id).delete();
+        await loadVideos();
+        renderPortfolio();
+        renderVideoList();
+        refreshAdminStats();
+        toast('Video deleted','ok');
+    }catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER PORTFOLIO (public) — staggered animation
+═══════════════════════════════════════════════════ */
+document.getElementById('filterBtns').addEventListener('click',e=>{
+    const btn=e.target.closest('.filter-btn');
+    if(!btn) return;
+    activeFilter=btn.dataset.f;
+    shownPortfolio=PORTFOLIO_PER_PAGE;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    renderPortfolio();
+});
+
+document.getElementById('portShowMoreBtn').addEventListener('click',()=>{
+    shownPortfolio+=PORTFOLIO_PER_PAGE;
+    renderPortfolio();
+});
+
+function renderPortfolio(){
+    const grid       = document.getElementById('portfolioGrid');
+    const moreRow    = document.getElementById('portShowMoreRow');
+    const filtered   = activeFilter==='all' ? allVideos : allVideos.filter(v=>v.cat===activeFilter);
+
+    if(!filtered.length){
+        grid.innerHTML='<div class="empty-msg">✦ &nbsp; No videos yet — add some from admin &nbsp; ✦</div>';
+        moreRow.style.display='none';
+        return;
+    }
+
+    const visible=filtered.slice(0,shownPortfolio);
+
+    grid.innerHTML=visible.map(v=>{
+        const thumb=v.thumbSrc
+            ?`<img src="${v.thumbSrc}" alt="${v.title}" loading="lazy">`
+            :`<div class="thumb-placeholder">🎬</div>`;
+
+        let dlBtn='';
+        if(v.srcType==='file'&&v.rawUrl)
+            dlBtn=`<a class="action-btn btn-dl" href="${v.rawUrl}" target="_blank" rel="noopener">⬇ Download</a>`;
+        else if(v.rawUrl)
+            dlBtn=`<a class="action-btn btn-dl" href="${v.rawUrl}" target="_blank" rel="noopener">⬇ Open</a>`;
+
+        return `
+        <div class="portfolio-card" data-id="${v.id}">
+            <div class="portfolio-thumb">
+                ${thumb}
+                <div class="play-overlay" onclick="openLightbox('${v.id}')">
+                    <div class="play-btn-circle">▶</div>
+                </div>
+            </div>
+            <div class="portfolio-card-info">
+                <div class="portfolio-card-cat">${catLabel(v.cat)}${v.client?' · '+v.client:''}</div>
+                <div class="portfolio-card-title">${v.title}</div>
+                ${v.desc?`<div class="portfolio-card-desc">${v.desc}</div>`:''}
+                <div class="card-actions">
+                    <button class="action-btn btn-play" onclick="openLightbox('${v.id}')">▶ &nbsp;Play</button>
+                    ${dlBtn}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    moreRow.style.display=filtered.length>shownPortfolio?'block':'none';
+    addHover();
+    observeCards(); // trigger staggered card animation
+}
+
+function catLabel(c){ return {video:'Video Edit',short:'Short Form',color:'Color Grade',motion:'Motion'}[c]||c||''; }
+
+/* ═══════════════════════════════════════════════════
+   LIGHTBOX
+═══════════════════════════════════════════════════ */
+const lightbox=document.getElementById('lightbox');
+const lbInner =document.getElementById('lightboxInner');
+
+function openLightbox(id){
+    const v=allVideos.find(x=>x.id===id);
+    if(!v) return;
+
+    const isEmbed=(v.srcType==='yt'||v.srcType==='vimeo'||v.srcType==='gdrive');
+    const mediaHtml=isEmbed
+        ?`<iframe src="${v.videoSrc}" allowfullscreen allow="autoplay; fullscreen" style="width:100%;aspect-ratio:16/9;border:none;border-radius:4px;"></iframe>`
+        :`<video src="${v.videoSrc}" controls autoplay playsinline style="width:100%;border-radius:4px;background:#000;max-height:75vh;"></video>`;
+
+    const dlHtml=v.rawUrl
+        ?`<a class="lb-dl" href="${v.rawUrl}" target="_blank" rel="noopener">⬇ ${v.srcType==='file'?'Download':'Open Original'}</a>`
+        :'';
+
+    lbInner.innerHTML=`
+        <button class="lb-close" onclick="closeLightbox()">✕</button>
+        ${mediaHtml}
+        <div class="lightbox-meta">
+            <div class="lightbox-title">${v.title}</div>
+            ${dlHtml}
+        </div>`;
+
+    lightbox.classList.add('open');
+    document.body.style.overflow='hidden';
+    addHover();
+}
+
+function closeLightbox(){
+    lightbox.classList.remove('open');
+    document.body.style.overflow='';
+    lbInner.innerHTML='';
+}
+
+lightbox.addEventListener('click',e=>{ if(e.target===lightbox) closeLightbox(); });
+
+/* ═══════════════════════════════════════════════════
+   ADMIN VIDEO LIST
+═══════════════════════════════════════════════════ */
+function renderVideoList(){
+    const list=document.getElementById('videoList');
+    document.getElementById('vcCount').textContent=allVideos.length;
+    if(!allVideos.length){ list.innerHTML='<div class="a-empty">No videos yet. Add your first one above.</div>'; return; }
+    list.innerHTML=allVideos.map(v=>`
+        <div class="a-list-item">
+            <div class="a-thumb">${v.thumbSrc?`<img src="${v.thumbSrc}" alt="">`:v.srcType==='file'?'🎬':'🔗'}</div>
+            <div class="a-info">
+                <div class="a-name">${v.title}</div>
+                <div class="a-meta">${catLabel(v.cat)}${v.client?' · '+v.client:''} · ${v.srcType}</div>
+            </div>
+            <div class="a-actions">
+                <button class="a-btn" style="background:rgba(216,212,192,.1);border:1px solid rgba(216,212,192,.2)!important;color:var(--cream-dark);" onclick="previewVideo('${v.id}')">▶ Preview</button>
+                <button class="a-btn a-del" onclick="deleteVideo('${v.id}')">🗑 Delete</button>
+            </div>
+        </div>
+    `).join('');
+    addHover();
+}
+
+function previewVideo(id){ openLightbox(id); }
+
+/* ═══════════════════════════════════════════════════
+   STAR PICKER — blank by default, integer value
+═══════════════════════════════════════════════════ */
+const starIcons=document.querySelectorAll('#starPicker i');
+
+starIcons.forEach(star=>{
+    star.addEventListener('click',()=>{
+        selectedStars = parseInt(star.dataset.v, 10);
+        updateStarDisplay(selectedStars);
+    });
+    star.addEventListener('mouseenter',()=>{
+        const hVal=parseInt(star.dataset.v,10);
+        starIcons.forEach(s=>{
+            s.classList.remove('lit','hover');
+            if(parseInt(s.dataset.v,10)<=hVal) s.classList.add('hover');
+        });
+    });
+    star.addEventListener('mouseleave',()=>{
+        starIcons.forEach(s=>s.classList.remove('hover'));
+        updateStarDisplay(selectedStars);
+    });
+});
+
+function updateStarDisplay(val){
+    starIcons.forEach(s=>{
+        s.classList.remove('lit','hover');
+        if(val>0 && parseInt(s.dataset.v,10)<=val) s.classList.add('lit');
+    });
+}
+function resetStarPicker(){ selectedStars=0; updateStarDisplay(0); }
+
+/* ═══════════════════════════════════════════════════
+   AVATAR UPLOAD — full base64 stored in Firestore
+═══════════════════════════════════════════════════ */
+const avatarInput    = document.getElementById('avatarInput');
+const avatarPrev     = document.getElementById('avatarPrev');
+const avatarAreaText = document.getElementById('avatarAreaText');
+
+avatarInput.addEventListener('change',e=>{
+    const f=e.target.files[0];
+    if(!f) return;
+    if(f.size>2*1024*1024){ showAlert('⚠️','File Too Large','Please upload an image under 2MB.'); avatarInput.value=''; return; }
+    const reader=new FileReader();
+    reader.onload=ev=>{
+        avatarDataUrl=ev.target.result;
+        avatarPrev.src=avatarDataUrl;
+        avatarPrev.style.display='block';
+        avatarAreaText.textContent='✓ Photo ready';
+    };
+    reader.readAsDataURL(f);
+});
+
+function resetAvatarArea(){
+    avatarDataUrl='';
+    avatarPrev.src=''; avatarPrev.style.display='none';
+    avatarAreaText.textContent='📷 Click to add photo';
+    avatarInput.value='';
+}
+
+/* ═══════════════════════════════════════════════════
+   SUBMIT REVIEW → saved to Firestore
+═══════════════════════════════════════════════════ */
+document.getElementById('reviewForm').addEventListener('submit',e=>{ e.preventDefault(); submitReview(); });
+
+async function submitReview(){
+    const name = document.getElementById('rName').value.trim();
+    const text = document.getElementById('rText').value.trim();
+
+    if(!name){ showAlert('✏️','Name Required','Please enter your full name.'); return; }
+    if(!text){ showAlert('✏️','Review Required','Please write your review.'); return; }
+    if(!selectedStars || isNaN(selectedStars) || selectedStars<1){
+        showAlert('⭐','Rating Required','Please click a star to rate (1–5) before submitting.'); return;
+    }
+
+    const btn=document.getElementById('reviewSubmitBtn');
+    btn.disabled=true; btn.textContent='Submitting…';
+
+    try{
+        await db.collection('reviews').add({
+            name, text,
+            role:    document.getElementById('rRole').value.trim(),
+            stars:   selectedStars,   // guaranteed integer 1-5
+            avatar:  avatarDataUrl,
+            approved:false,
+            ts:      firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Reset everything
+        document.getElementById('rName').value='';
+        document.getElementById('rRole').value='';
+        document.getElementById('rText').value='';
+        resetStarPicker();
+        resetAvatarArea();
+
+        await loadReviews();
+        shownReviews=REVIEWS_PER_PAGE;
+        renderPublicReviews();
+
+        if(document.getElementById('adminPanel').classList.contains('open')){
+            renderAdminReviewList(); refreshAdminStats();
+        }
+        toast('✓ Review submitted! Awaiting approval.','good');
+    }catch(e){
+        toast('Error: '+e.message,'err');
+    } finally {
+        btn.disabled=false; btn.textContent='Submit Review  →';
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   LOAD REVIEWS FROM FIRESTORE
+═══════════════════════════════════════════════════ */
+async function loadReviews(){
+    try{
+        const snap=await db.collection('reviews').orderBy('ts','desc').get();
+        allReviews=snap.docs.map(d=>({id:d.id,...d.data()}));
+    }catch(e){ console.error('loadReviews',e); }
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER PUBLIC REVIEWS — 6 + show more + card anim
+═══════════════════════════════════════════════════ */
+function renderPublicReviews(){
+    const grid    = document.getElementById('reviewsGrid');
+    const moreRow = document.getElementById('showMoreRow');
+    const approved= allReviews.filter(r=>r.approved);
+
+    if(!approved.length){
+        grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:60px 20px;font-family:'Barlow Condensed',sans-serif;font-size:.85rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;">No reviews yet — be the first!</div>`;
+        moreRow.style.display='none';
+        return;
+    }
+
+    const visible=approved.slice(0,shownReviews);
+    grid.innerHTML=visible.map(r=>`
+        <div class="review-card">
+            <div class="review-quote">"</div>
+            <div class="review-stars">${[1,2,3,4,5].map(i=>`<i class="fa-solid fa-star${i<=(parseInt(r.stars)||0)?'':' empty'}"></i>`).join('')}</div>
+            <div class="review-text">"${r.text}"</div>
+            <div class="review-author">
+                <div class="review-avatar">${r.avatar?`<img src="${r.avatar}" alt="${r.name}">`:r.name[0].toUpperCase()}</div>
+                <div>
+                    <div class="review-name">${r.name}</div>
+                    ${r.role?`<div class="review-role">${r.role}</div>`:''}
+                    <div class="review-date">${r.ts&&r.ts.toDate?r.ts.toDate().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'Recently'}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Show all reviews on demand with no hard limit.
+    // Button toggles between: show 6 vs show all.
+    moreRow.style.display = approved.length > REVIEWS_PER_PAGE ? 'block' : 'none';
+
+    const btn=document.getElementById('showMoreBtn');
+    if(btn){
+        btn.textContent = shownReviews > REVIEWS_PER_PAGE ? 'Show Less Reviews ↑' : 'Show More Reviews ↓';
+    }
+
+
+    addHover();
+    observeCards(); // staggered reveal
+}
+
+document.getElementById('showMoreBtn').addEventListener('click',()=>{
+    // toggle: show more -> show less
+    const btn=document.getElementById('showMoreBtn');
+    const allApproved=allReviews.filter(r=>r.approved);
+
+    // Goal: always show ONLY 6 when user clicks back to less
+    const canShowMore = allApproved.length > REVIEWS_PER_PAGE;
+    if(!canShowMore){
+        shownReviews = REVIEWS_PER_PAGE;
+        btn.textContent='Show More Reviews ↓';
+    } else {
+        const showingMore = shownReviews > REVIEWS_PER_PAGE;
+        if(showingMore){
+            // currently showing all -> collapse to exactly 6
+            shownReviews = REVIEWS_PER_PAGE;
+            btn.textContent = 'Show More Reviews ↓';
+        } else {
+            // currently showing 6 -> expand to show ALL approved reviews
+            shownReviews = allApproved.length;
+            btn.textContent = 'Show Less Reviews ↑';
+        }
+    }
+    renderPublicReviews();
+});
+
+/* ═══════════════════════════════════════════════════
+   ADMIN REVIEW LIST
+═══════════════════════════════════════════════════ */
+function renderAdminReviewList(){
+    const list=document.getElementById('reviewList');
+    document.getElementById('rcCount').textContent=allReviews.length;
+    if(!allReviews.length){ list.innerHTML='<div class="a-empty">No reviews yet.</div>'; return; }
+    list.innerHTML=allReviews.map(r=>`
+        <div class="a-list-item">
+            <div class="a-thumb" style="font-size:1.8rem;">${r.avatar?`<img src="${r.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">`:r.name[0].toUpperCase()}</div>
+            <div class="a-info">
+                <div class="a-name">
+                    ${r.name}
+                    <span class="a-badge ${r.approved?'badge-approved':'badge-pending'}">${r.approved?'✓ Live':'⏳ Pending'}</span>
+                </div>
+                <div class="a-meta">${'★'.repeat(parseInt(r.stars)||0)}${'☆'.repeat(5-(parseInt(r.stars)||0))} · ${r.role||'—'}</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:.68rem;color:var(--cream-dark);margin-top:6px;">"${(r.text||'').slice(0,100)}${(r.text||'').length>100?'…':''}"</div>
+            </div>
+            <div class="a-actions">
+                ${r.approved
+                    ?`<button class="a-btn a-del" onclick="toggleApprove('${r.id}',false)">Unpublish</button>`
+                    :`<button class="a-btn a-approve" onclick="toggleApprove('${r.id}',true)">✓ Approve</button>`
+                }
+                <button class="a-btn" style="background:rgba(216,212,192,.1);border:1px solid rgba(216,212,192,.2)!important;color:var(--cream-dark);" onclick="openEditReview('${r.id}')">✏ Edit</button>
+                <button class="a-btn a-del" onclick="deleteReview('${r.id}')">🗑 Del</button>
+            </div>
+        </div>
+    `).join('');
+    addHover();
+}
+
+window.toggleApprove = async function(id,val){
+    // ensure inline onclick can always find this handler
+
+    try{
+        await db.collection('reviews').doc(id).update({approved:val});
+        await loadReviews();
+        renderPublicReviews();
+        renderAdminReviewList();
+        refreshAdminStats();
+        toast(val?'✓ Review is now live!':'Review unpublished',val?'good':'ok');
+    }catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+async function deleteReview(id){
+    if(!confirm('Delete this review permanently?')) return;
+    try{
+        await db.collection('reviews').doc(id).delete();
+        await loadReviews();
+        renderPublicReviews();
+        renderAdminReviewList();
+        refreshAdminStats();
+        toast('Review deleted','ok');
+    }catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   EDIT REVIEW MODAL
+═══════════════════════════════════════════════════ */
+function openEditReview(id){
+    const r=allReviews.find(x=>x.id===id); if(!r) return;
+    document.getElementById('editId').value    = id;
+    document.getElementById('editName').value  = r.name;
+    document.getElementById('editRole').value  = r.role||'';
+    document.getElementById('editText').value  = r.text;
+    document.getElementById('editStars').value = r.stars||5;
+    document.getElementById('editModal').classList.add('open');
+}
+document.getElementById('editModalClose').addEventListener('click',()=>document.getElementById('editModal').classList.remove('open'));
+document.getElementById('editCancel').addEventListener('click',()=>document.getElementById('editModal').classList.remove('open'));
+document.getElementById('editSave').addEventListener('click',async ()=>{
+    const id=document.getElementById('editId').value;
+    try{
+        await db.collection('reviews').doc(id).update({
+            name:  document.getElementById('editName').value.trim(),
+            role:  document.getElementById('editRole').value.trim(),
+            text:  document.getElementById('editText').value.trim(),
+            stars: parseInt(document.getElementById('editStars').value,10)
+        });
+        document.getElementById('editModal').classList.remove('open');
+        await loadReviews();
+        renderPublicReviews();
+        renderAdminReviewList();
+        toast('✓ Review updated','good');
+    }catch(e){ toast('Error: '+e.message,'err'); }
+});
+
+/* ═══════════════════════════════════════════════════
+   CONTACT FORM
+═══════════════════════════════════════════════════ */
+function handleContactForm(e){
+    e.preventDefault();
+    const form=e.target, btn=form.querySelector('.submit-btn'), orig=btn.textContent;
+    btn.textContent='✓ Sent!'; btn.style.background='var(--olive-dark)'; btn.style.color='var(--cream)';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.background=btn.style.color=''; form.reset(); },3000);
+    toast('Message sent — I\'ll be in touch soon!','good');
+}
+
+/* ═══════════════════════════════════════════════════
+   KEYBOARD
+═══════════════════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+        closeLightbox();
+        document.getElementById('adminOverlay').classList.remove('open');
+        document.getElementById('editModal').classList.remove('open');
+        document.getElementById('alertPopup').classList.remove('open');
+        if(drawerOpen) toggleDrawer(false);
+    }
+});
+
+/* ═══════════════════════════════════════════════════
+   INIT — load data from Firebase then render
+═══════════════════════════════════════════════════ */
+(async function init(){
+    try{
+        await Promise.all([loadVideos(), loadReviews()]);
+        renderPortfolio();
+        renderPublicReviews();
+    }catch(err){
+        console.error('Firebase init error:', err);
+        // Graceful fallback — render empty states
+        renderPortfolio();
+        renderPublicReviews();
+        toast('Could not connect to database. Check Firebase config.','err');
+    }
+})();
+</script>
+</body>
+</html>
