@@ -1286,14 +1286,9 @@ const uploadEndpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}
             const publicId = cloudinaryResult.public_id;
 
 
-            // Optional thumbnail (still to Firebase for now; can be migrated later)
+            // Optional thumbnail disabled for now (to avoid Firebase Storage CORS issues).
+            // Upload thumbnails to Cloudinary later if you want.
             let thumbUrl='';
-            const tf=document.getElementById('vThumb').files[0];
-            if(tf){
-                const thumbRef=storage.ref('portfolio/thumbs/'+Date.now()+'_'+tf.name);
-                await thumbRef.put(tf);
-                thumbUrl=await thumbRef.getDownloadURL();
-            }
 
             await db.collection('portfolioVideos').add({
                 title, cat,
