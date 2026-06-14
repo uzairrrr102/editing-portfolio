@@ -1245,8 +1245,18 @@ async function addVideo(){
             const progTxt=document.getElementById('progText');
             prog.style.display='block';
 
-            // Upload video to Firebase Storage
-            console.log('[Upload] starting video upload', {
+// Upload video to Cloudinary (unsigned preset, browser → Cloudinary)
+            // NOTE: This requires a Cloudinary unsigned upload preset named: portfolio_videos
+
+            const CLOUDINARY_CLOUD_NAME = 'dahsfmv7b';
+            const CLOUDINARY_UNSIGNED_UPLOAD_PRESET = 'portfolio_videos';
+
+            const formData = new FormData();
+            formData.append('file', vf);
+            formData.append('upload_preset', CLOUDINARY_UNSIGNED_UPLOAD_PRESET);
+            formData.append('resource_type', 'video');
+
+            console.log('[Cloudinary] starting upload', {
                 title,
                 cat,
                 fileName: vf.name,
@@ -1254,35 +1264,25 @@ async function addVideo(){
                 type: vf.type,
             });
 
-            const videoRef = storage.ref('portfolio/videos/' + Date.now() + '_' + vf.name);
-            console.log('[Upload] storageRef=', videoRef.fullPath);
+            const uploadEndpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${CLOUDINARY_UNSIGNED_UPLOAD_PRESET}/upload`;
 
-            const uploadTask = videoRef.put(vf);
-
-            await new Promise((resolve,reject)=>{
-                uploadTask.on('state_changed',
-                    snap=>{
-                        const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100);
-                        fill.style.width=pct+'%';
-                        progTxt.textContent='Uploading… '+pct+'%';
-                        if(pct===0 || pct===100) console.log('[Upload] progress pct=', pct, snap.bytesTransferred, snap.totalBytes);
-                    },
-                    err=>{
-                        console.error('[Upload] uploadTask error:', err);
-                        reject(err);
-                    },
-                    ()=>{
-                        console.log('[Upload] uploadTask complete');
-                        resolve();
-                    }
-                );
+            const res = await fetch(uploadEndpoint, {
+                method: 'POST',
+                body: formData,
             });
 
+            if(!res.ok){
+                const t = await res.text().catch(()=>null);
+                throw new Error('Cloudinary upload failed: HTTP ' + res.status + (t ? (' - ' + t) : ''));
+            }
 
-            fill.style.width='100%'; progTxt.textContent='Finalizing…';
-            const videoUrl=await uploadTask.snapshot.ref.getDownloadURL();
+            const cloudinaryResult = await res.json();
 
-            // Optional thumbnail
+            // Cloudinary returns fields like secure_url, public_id, bytes, format, etc.
+            const videoUrl = cloudinaryResult.secure_url;
+            const publicId = cloudinaryResult.public_id;
+
+            // Optional thumbnail (still to Firebase for now; can be migrated later)
             let thumbUrl='';
             const tf=document.getElementById('vThumb').files[0];
             if(tf){
@@ -1298,10 +1298,13 @@ async function addVideo(){
                 videoSrc: videoUrl,
                 rawUrl:   videoUrl,
                 thumbSrc: thumbUrl,
-                storagePath: videoRef.fullPath,
+                cloudinaryPublicId: publicId,
                 srcType: 'file',
                 ts: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            fill.style.width='100%';
+            progTxt.textContent='Finalizing…';
 
             prog.style.display='none'; fill.style.width='0';
             toast('✓ Video uploaded & saved permanently!','good');
