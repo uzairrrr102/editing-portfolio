@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://syeduzairjavaid.netlify.app/sitemap.xml
