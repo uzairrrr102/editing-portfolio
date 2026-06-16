@@ -357,10 +357,11 @@
         .badge-approved{background:rgba(70,160,90,.15);color:#5cb85c;border:1px solid rgba(70,160,90,.3);}
         .a-empty{padding:28px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-sm);font-weight:600;}
 
-        /* Edit modal */
-        .edit-modal{position:fixed;inset:0;background:rgba(20,23,14,.95);z-index:9700;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;padding:20px;}
+/* Edit modal */
+        .edit-modal{position:fixed;inset:0;background:rgba(20,23,14,.95);z-index:999999999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;padding:20px;}
         .edit-modal.open{opacity:1;pointer-events:all;}
         .edit-modal-box{background:var(--olive-dark);padding:40px;width:100%;max-width:560px;border:1px solid rgba(216,212,192,.1);position:relative;max-height:90vh;overflow-y:auto;}
+        .edit-modal.open *{pointer-events:auto !important;}
         .edit-modal-box h3{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.4rem;text-transform:uppercase;letter-spacing:2px;color:var(--cream);margin-bottom:24px;}
         .edit-actions{display:flex;gap:10px;margin-top:20px;}
         .edit-save{padding:14px 32px;background:var(--cream);color:var(--dark);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.78rem;letter-spacing:3px;text-transform:uppercase;cursor:none;transition:all .3s;}
@@ -1614,6 +1615,7 @@ avatarInput.addEventListener('change',e=>{
 });
 
 function resetAvatarArea(){
+
     avatarDataUrl='';
     avatarPrev.src=''; avatarPrev.style.display='none';
     avatarAreaText.textContent='📷 Click to add photo';
@@ -1818,9 +1820,14 @@ function openEditReview(id){
     document.getElementById('editStars').value = r.stars||5;
     document.getElementById('editModal').classList.add('open');
 }
-document.getElementById('editModalClose').addEventListener('click',()=>document.getElementById('editModal').classList.remove('open'));
-document.getElementById('editCancel').addEventListener('click',()=>document.getElementById('editModal').classList.remove('open'));
-document.getElementById('editSave').addEventListener('click',async ()=>{
+document.getElementById('editModalClose').addEventListener('click',()=>{
+    document.getElementById('editModal').classList.remove('open');
+});
+document.getElementById('editCancel').addEventListener('click',()=>{
+    document.getElementById('editModal').classList.remove('open');
+});
+const __editSaveBtn = document.getElementById('editSave');
+__editSaveBtn.addEventListener('click',async ()=>{
     const id=document.getElementById('editId').value;
     try{
         await db.collection('reviews').doc(id).update({
@@ -1834,7 +1841,10 @@ document.getElementById('editSave').addEventListener('click',async ()=>{
         renderPublicReviews();
         renderAdminReviewList();
         toast('✓ Review updated','good');
-    }catch(e){ toast('Error: '+e.message,'err'); }
+    }catch(e){
+        console.error('editSave error:', e);
+        toast('Error: '+(e?.message||e),'err');
+    }
 });
 
 /* ═══════════════════════════════════════════════════
